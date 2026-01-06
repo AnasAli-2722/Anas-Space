@@ -75,7 +75,8 @@ class _VideoThumbnailViewState extends State<VideoThumbnailView> {
       return Image.file(
         _cachedFile!,
         fit: BoxFit.cover,
-        errorBuilder: (ctx, _, __) => Container(color: Colors.grey[900]),
+        errorBuilder: (ctx, error, stackTrace) =>
+            Container(color: Colors.grey[900]),
       );
     }
 

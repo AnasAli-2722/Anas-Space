@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:path_provider/path_provider.dart';
@@ -43,6 +44,31 @@ class _DashboardPageState extends State<DashboardPage> {
   final Set<String> _selectedIds = {};
   bool _isSelectionMode = false;
   final bool _isMobile = Platform.isAndroid || Platform.isIOS;
+
+  bool? _androidMoveToTrashSupported;
+
+  Future<bool> _tryAndroidMoveToTrash(AssetEntity asset) async {
+    if (!Platform.isAndroid) return false;
+    if (_androidMoveToTrashSupported == false) return false;
+
+    try {
+      final dynamic editor = PhotoManager.editor;
+      final dynamic result = await (editor as dynamic).moveToTrash([asset]);
+
+      final ok = result is List && result.contains(asset.id);
+      if (ok) _androidMoveToTrashSupported = true;
+      return ok;
+    } catch (e, st) {
+      if (e is NoSuchMethodError || e is MissingPluginException) {
+        _androidMoveToTrashSupported = false;
+      }
+      debugPrintStack(
+        label: 'Android moveToTrash unavailable: $e',
+        stackTrace: st,
+      );
+      return false;
+    }
+  }
 
   @override
   void initState() {
@@ -322,26 +348,29 @@ class _DashboardPageState extends State<DashboardPage> {
             final permission = await PhotoManager.requestPermissionExtend();
             if (!permission.isAuth) continue;
 
-            if (Platform.isAndroid) {
-              try {
-                final dynamic editor = PhotoManager.editor;
-                final dynamic result = await editor.moveToTrash([deviceAsset]);
-
-                // Expected shape (when supported): List<String> of trashed ids.
-                if (result is List && result.contains(deviceAsset.id)) {
-                  deletedCount++;
-                  continue;
-                }
-              } catch (_) {
-                // moveToTrash not supported/exposed; fall back to delete.
-              }
+            final movedToTrash = await _tryAndroidMoveToTrash(deviceAsset);
+            if (movedToTrash) {
+              deletedCount++;
+              continue;
             }
 
-            // Fallback (or platforms without move-to-trash): permanent delete.
-            final deletedIds = await PhotoManager.editor.deleteWithIds([
-              deviceAsset.id,
-            ]);
-            if (deletedIds.contains(deviceAsset.id)) deletedCount++;
+            // Fallback: permanent delete.
+            try {
+              final deletedIds = await PhotoManager.editor.deleteWithIds([
+                deviceAsset.id,
+              ]);
+              if (deletedIds.contains(deviceAsset.id)) deletedCount++;
+            } catch (e, st) {
+              debugPrintStack(
+                label: 'Error deleting device asset ${deviceAsset.id}: $e',
+                stackTrace: st,
+              );
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error deleting item: $e')),
+                );
+              }
+            }
             continue;
           }
 

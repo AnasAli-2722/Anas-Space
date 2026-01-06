@@ -142,8 +142,12 @@ class GalleryService {
     }
 
     Map<String, UnifiedAsset> uniqueAssets = {};
-    for (var asset in foundAssets) uniqueAssets[asset.id] = asset;
-    for (var asset in hiddenWhatsApp) uniqueAssets[asset.id] = asset;
+    for (var asset in foundAssets) {
+      uniqueAssets[asset.id] = asset;
+    }
+    for (var asset in hiddenWhatsApp) {
+      uniqueAssets[asset.id] = asset;
+    }
 
     _cachedAssets = uniqueAssets.values.toList();
     final cleanDashboardList = _cachedAssets.where((asset) {

@@ -55,7 +55,7 @@ class InfinityBridge {
 
       final handler = const Pipeline()
           .addMiddleware(logRequests())
-          .addHandler(app);
+          .addHandler(app.call);
 
       _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, 4545);
       return myIp;
