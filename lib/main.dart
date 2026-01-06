@@ -13,12 +13,10 @@ import 'features/sync/presentation/cubit/sync_cubit.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Check if we are on a Desktop platform BEFORE using window_manager
   bool isDesktop =
       !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
 
   if (isDesktop) {
-    // Only initialize window manager on desktop
     await windowManager.ensureInitialized();
 
     WindowOptions windowOptions = const WindowOptions(
@@ -35,12 +33,10 @@ void main() async {
       await windowManager.focus();
     });
 
-    // Initialize FFI for desktop databases
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
 
-  // This is safe to run on mobile
   PaintingBinding.instance.imageCache.maximumSizeBytes = 500 * 1024 * 1024;
 
   final galleryService = GalleryService();
