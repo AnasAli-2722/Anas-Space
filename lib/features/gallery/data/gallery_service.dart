@@ -1,12 +1,16 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../domain/unified_asset.dart';
 import '../domain/album_model.dart';
+import '../../../core/services/trash_service.dart';
 
 class GalleryService {
   List<UnifiedAsset> _cachedAssets = [];
   List<UnifiedAsset> get cachedAssets => _cachedAssets;
+
+  TrashService? _trashService;
 
   final List<String> _ignoredKeywords = [
     "2021",
@@ -17,8 +21,24 @@ class GalleryService {
     "2026",
   ];
 
+  Set<String> get _excludedFolderNames => _ignoredKeywords.toSet();
+
+  void initTrash(String trashPath) {
+    _trashService = TrashService(trashPath: trashPath);
+  }
+
+  TrashService? get trashService => _trashService;
+
   Future<List<UnifiedAsset>> scanWhatsAppRaw() async {
     List<UnifiedAsset> found = [];
+
+    // Accessing WhatsApp's raw media folders on Android often requires broad storage permissions.
+    // If not granted, fail closed (skip hidden WhatsApp scan) rather than crashing.
+    final hasAllFilesAccess = await Permission.manageExternalStorage.isGranted;
+    if (!hasAllFilesAccess) {
+      final req = await Permission.manageExternalStorage.request();
+      if (!req.isGranted) return [];
+    }
 
     final List<String> targetFolders = [
       "WhatsApp Images",
@@ -42,10 +62,15 @@ class GalleryService {
         if (!await specificPath.exists()) continue;
 
         try {
-          final entities = specificPath.list(
-            recursive: true,
-            followLinks: false,
-          );
+          final entities = specificPath
+              .list(recursive: true, followLinks: false)
+              .timeout(
+                const Duration(seconds: 30),
+                onTimeout: (sink) {
+                  debugPrint("Scan timeout for $target");
+                  sink.close();
+                },
+              );
 
           await for (var entity in entities) {
             if (entity is File) {
@@ -68,8 +93,11 @@ class GalleryService {
               }
             }
           }
-        } catch (e) {
-          print("Error scanning $target: $e");
+        } catch (e, stackTrace) {
+          debugPrintStack(
+            label: "Error scanning $target: $e",
+            stackTrace: stackTrace,
+          );
         }
       }
     }
@@ -79,8 +107,7 @@ class GalleryService {
   Future<List<UnifiedAsset>> scanMobileGallery() async {
     final PermissionState ps = await PhotoManager.requestPermissionExtend();
     if (!ps.isAuth) {
-      await Permission.storage.request();
-      if (!await Permission.storage.isGranted) return [];
+      return [];
     }
 
     List<UnifiedAsset> foundAssets = [];
@@ -134,41 +161,41 @@ class GalleryService {
   }
 
   Future<List<UnifiedAsset>> scanDesktopGallery() async {
-    List<File> files = [];
-    final userProfile = Platform.environment['USERPROFILE'];
-    List<String> paths = [];
+    if (!Platform.isWindows) return [];
 
-    if (userProfile != null) {
-      paths = [
-        '$userProfile\\Pictures',
-        '$userProfile\\Downloads',
-        '$userProfile\\Videos',
-        '$userProfile\\OneDrive - University of Engineering and Technology Taxila\\Pictures',
-      ];
+    final files = <File>[];
+    final userProfile = Platform.environment['USERPROFILE'];
+    final oneDrive =
+        Platform.environment['OneDrive'] ??
+        Platform.environment['OneDriveConsumer'];
+
+    final paths = <String>[];
+    if (userProfile != null && userProfile.isNotEmpty) {
+      paths.addAll([
+        '$userProfile${Platform.pathSeparator}Pictures',
+        '$userProfile${Platform.pathSeparator}Downloads',
+        '$userProfile${Platform.pathSeparator}Videos',
+      ]);
+    }
+    if (oneDrive != null && oneDrive.isNotEmpty) {
+      paths.add('$oneDrive${Platform.pathSeparator}Pictures');
     }
 
-    for (var p in paths) {
+    for (final p in paths.toSet()) {
       final dir = Directory(p);
-      if (await dir.exists()) {
-        try {
-          await for (final file in dir.list(
-            recursive: true,
-            followLinks: false,
-          )) {
-            if (file is File) {
-              final path = file.path.toLowerCase();
+      if (!await dir.exists()) continue;
 
-              bool isBlocked = _ignoredKeywords.any(
-                (k) => path.contains(k.toLowerCase()),
-              );
-              if (isBlocked) continue;
-
-              if (_isValidMediaExtension(path)) {
-                files.add(file);
-              }
-            }
-          }
-        } catch (e) {}
+      try {
+        final scanned = await _scanDirectoryWindows(
+          dir,
+          timeout: const Duration(seconds: 30),
+        );
+        files.addAll(scanned);
+      } catch (e, stackTrace) {
+        debugPrintStack(
+          label: 'Error scanning directory $p: $e',
+          stackTrace: stackTrace,
+        );
       }
     }
 
@@ -184,6 +211,62 @@ class GalleryService {
         .toList();
 
     return _cachedAssets;
+  }
+
+  Future<List<File>> _scanDirectoryWindows(
+    Directory root, {
+    required Duration timeout,
+  }) async {
+    final results = <File>[];
+    final stopwatch = Stopwatch()..start();
+    final queue = <Directory>[root];
+
+    while (queue.isNotEmpty) {
+      if (stopwatch.elapsed > timeout) {
+        debugPrint('Scan timeout for directory: ${root.path}');
+        break;
+      }
+
+      final current = queue.removeLast();
+      try {
+        await for (final entity in current.list(followLinks: false)) {
+          if (stopwatch.elapsed > timeout) break;
+
+          if (entity is Directory) {
+            final folderName = entity.path
+                .split(Platform.pathSeparator)
+                .where((s) => s.isNotEmpty)
+                .last;
+            if (_excludedFolderNames.contains(folderName)) {
+              continue;
+            }
+            queue.add(entity);
+          } else if (entity is File) {
+            if (_isUnderExcludedFolder(entity.path)) continue;
+            final lower = entity.path.toLowerCase();
+            if (_isValidMediaExtension(lower)) {
+              results.add(entity);
+            }
+          }
+        }
+      } catch (_) {
+        // Ignore per-folder read errors (permissions, transient issues)
+      }
+    }
+
+    return results;
+  }
+
+  bool _isUnderExcludedFolder(String filePath) {
+    final parts = filePath.split(Platform.pathSeparator);
+    if (parts.length <= 1) return false;
+
+    // Exclude only folder segments, not the filename.
+    for (var i = 0; i < parts.length - 1; i++) {
+      final part = parts[i];
+      if (_excludedFolderNames.contains(part)) return true;
+    }
+    return false;
   }
 
   Future<List<UnifiedAlbum>> fetchAlbums() async {
@@ -286,9 +369,18 @@ class GalleryService {
 
   Future<List<UnifiedAsset>> scanLocker(String lockerPath) async {
     final dir = Directory(lockerPath);
-    List<File> files = [];
+    final files = <File>[];
     if (await dir.exists()) {
-      files = dir.listSync().whereType<File>().toList();
+      try {
+        await for (final entity in dir.list(followLinks: false)) {
+          if (entity is File) files.add(entity);
+        }
+      } catch (e, stackTrace) {
+        debugPrintStack(
+          label: 'Error scanning locker $lockerPath: $e',
+          stackTrace: stackTrace,
+        );
+      }
     }
     return files
         .map(

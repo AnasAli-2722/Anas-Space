@@ -2,14 +2,15 @@ import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:photo_manager/photo_manager.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:permission_handler/permission_handler.dart';
 import '../../domain/unified_asset.dart';
 import '../../data/gallery_service.dart';
 import '../widgets/asset_tile.dart';
 import '../../presentation/widgets/cinematic_background.dart';
 import '../../presentation/widgets/glass_app_bar.dart';
+import '../constants/ui_constants.dart';
+import '../../../../core/services/secure_storage_service.dart';
 
 import '../../../sync/presentation/pages/sync_page.dart';
 
@@ -27,6 +28,7 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   late GalleryService _galleryService;
+  late SecureStorageService _secureStorage;
 
   List<UnifiedAsset> _gallery = [];
   Map<String, List<UnifiedAsset>> _groupedGallery = {};
@@ -34,7 +36,7 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _isLoading = true;
   String _status = "Ready";
 
-  String? _lockerPin;
+  bool _pinIsSet = false;
   String _lockerPath = "";
   bool _isLockerMode = false;
 
@@ -46,20 +48,28 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     _galleryService = widget.galleryService;
+    _secureStorage = SecureStorageService();
     _bootSystem();
   }
 
   Future<void> _bootSystem() async {
-    if (_isMobile) {
-      if (await Permission.manageExternalStorage.request().isGranted) {}
-    }
-    final prefs = await SharedPreferences.getInstance();
-    _lockerPin = prefs.getString('anas_locker_pin');
+    _pinIsSet = await _secureStorage.hasPinSet();
 
     final docDir = await getApplicationDocumentsDirectory();
-    final lockerDir = Directory('${docDir.path}\\.anas_locker');
+    final lockerDir = Directory(
+      '${docDir.path}${Platform.pathSeparator}.anas_locker',
+    );
     if (!await lockerDir.exists()) await lockerDir.create();
     _lockerPath = lockerDir.path;
+
+    // Initialize trash on Windows
+    if (Platform.isWindows) {
+      final trashDir = Directory(
+        '${docDir.path}${Platform.pathSeparator}.anas_trash',
+      );
+      _galleryService.initTrash(trashDir.path);
+      await _galleryService.trashService?.init();
+    }
 
     await _refreshGallery();
   }
@@ -142,7 +152,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _handleLockerAccess() async {
-    if (_lockerPin == null) {
+    if (!_pinIsSet) {
       await _showPinDialog(isSetup: true);
     } else {
       await _showPinDialog(isSetup: false);
@@ -154,7 +164,7 @@ class _DashboardPageState extends State<DashboardPage> {
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
+        backgroundColor: UIConstants.dialogBackgroundColor,
         title: Text(
           isSetup ? "Set PIN" : "Enter PIN",
           style: const TextStyle(color: Colors.white),
@@ -166,8 +176,8 @@ class _DashboardPageState extends State<DashboardPage> {
           textAlign: TextAlign.center,
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 24,
-            letterSpacing: 5,
+            fontSize: UIConstants.pinInputFontSize,
+            letterSpacing: UIConstants.pinInputLetterSpacing,
           ),
           onChanged: (v) => input = v,
           onSubmitted: (_) {
@@ -189,13 +199,58 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _processPin(String input, bool isSetup) async {
-    if (isSetup && input.length >= 4) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('anas_locker_pin', input);
-      setState(() => _lockerPin = input);
-      _toggleLockerMode();
-    } else if (!isSetup && input == _lockerPin) {
-      _toggleLockerMode();
+    // Validate PIN length (minimum 4 digits, maximum 10)
+    if (input.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("PIN cannot be empty")));
+      return;
+    }
+
+    if (input.length < UIConstants.pinMinLength) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "PIN must be at least ${UIConstants.pinMinLength} characters",
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (input.length > UIConstants.pinMaxLength) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "PIN must not exceed ${UIConstants.pinMaxLength} characters",
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (isSetup) {
+      final success = await _secureStorage.setPin(input);
+      if (success) {
+        setState(() => _pinIsSet = true);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("PIN set successfully")));
+        _toggleLockerMode();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Error setting PIN. Try again.")),
+        );
+      }
+    } else {
+      final isValid = await _secureStorage.verifyPin(input);
+      if (isValid) {
+        _toggleLockerMode();
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Incorrect PIN")));
+      }
     }
   }
 
@@ -214,10 +269,12 @@ class _DashboardPageState extends State<DashboardPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF202020),
+        backgroundColor: UIConstants.dialogSecondaryBackgroundColor,
         title: const Text("Delete?", style: TextStyle(color: Colors.white)),
         content: Text(
-          "Delete $count items permanently?",
+          Platform.isWindows || Platform.isAndroid
+              ? "Move $count items to Trash?"
+              : "Delete $count items permanently?",
           style: const TextStyle(color: Colors.white70),
         ),
         actions: [
@@ -234,26 +291,102 @@ class _DashboardPageState extends State<DashboardPage> {
     );
 
     if (confirm == true) {
-      for (String id in _selectedIds) {
+      final Map<String, UnifiedAsset> assetsById = {
+        for (final a in _gallery) a.id: a,
+      };
+      int deletedCount = 0;
+      for (final id in _selectedIds.toList()) {
         try {
-          if (!_isMobile) {
-            final f = File(id);
-            if (await f.exists()) await f.delete();
+          final asset = assetsById[id];
+
+          // Desktop/Windows files
+          final localPath = asset?.localFile?.path;
+          if (localPath != null) {
+            final f = File(localPath);
+            if (!await f.exists()) continue;
+
+            if (Platform.isWindows && _galleryService.trashService != null) {
+              final trashedPath = await _galleryService.trashService!
+                  .moveToTrash(localPath);
+              if (trashedPath != null) deletedCount++;
+            } else {
+              await f.delete();
+              deletedCount++;
+            }
+            continue;
           }
-        } catch (e) {
-          debugPrint("Error deleting: $e");
+
+          // Mobile gallery assets (Android)
+          final deviceAsset = asset?.deviceAsset;
+          if (deviceAsset != null) {
+            final permission = await PhotoManager.requestPermissionExtend();
+            if (!permission.isAuth) continue;
+
+            if (Platform.isAndroid) {
+              try {
+                final dynamic editor = PhotoManager.editor;
+                final dynamic result = await editor.moveToTrash([deviceAsset]);
+
+                // Expected shape (when supported): List<String> of trashed ids.
+                if (result is List && result.contains(deviceAsset.id)) {
+                  deletedCount++;
+                  continue;
+                }
+              } catch (_) {
+                // moveToTrash not supported/exposed; fall back to delete.
+              }
+            }
+
+            // Fallback (or platforms without move-to-trash): permanent delete.
+            final deletedIds = await PhotoManager.editor.deleteWithIds([
+              deviceAsset.id,
+            ]);
+            if (deletedIds.contains(deviceAsset.id)) deletedCount++;
+            continue;
+          }
+
+          // Fallback: try treating id as a path
+          final fallback = File(id);
+          if (await fallback.exists()) {
+            if (Platform.isWindows && _galleryService.trashService != null) {
+              final trashedPath = await _galleryService.trashService!
+                  .moveToTrash(id);
+              if (trashedPath != null) deletedCount++;
+            } else {
+              await fallback.delete();
+              deletedCount++;
+            }
+          }
+        } catch (e, stackTrace) {
+          debugPrintStack(
+            label: "Error deleting file $id: $e",
+            stackTrace: stackTrace,
+          );
         }
       }
       _selectedIds.clear();
       _isSelectionMode = false;
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              Platform.isWindows || Platform.isAndroid
+                  ? "Moved $deletedCount items to Trash"
+                  : "Deleted $deletedCount items",
+            ),
+          ),
+        );
+      }
+
       await _refreshGallery();
     }
   }
 
   Future<void> _moveSelectedFiles() async {
-    if (!_isLockerMode && _lockerPin == null) {
+    if (!_isLockerMode && !_pinIsSet) {
       await _showPinDialog(isSetup: true);
-      if (_lockerPin == null) return;
+      if (!_pinIsSet) return;
     }
 
     final isHiding = !_isLockerMode;
@@ -261,7 +394,7 @@ class _DashboardPageState extends State<DashboardPage> {
         ? _lockerPath
         : (_isMobile
               ? ""
-              : '${Platform.environment['USERPROFILE']}\\Downloads');
+              : '${Platform.environment['USERPROFILE']}${Platform.pathSeparator}Downloads');
     if (!isHiding && _isMobile) return;
 
     int count = 0;
@@ -270,13 +403,19 @@ class _DashboardPageState extends State<DashboardPage> {
         try {
           final f = File(id);
           final name = f.path.split(Platform.pathSeparator).last;
-          final newPath = '$dest\\$name';
+          final newPath = '$dest${Platform.pathSeparator}$name';
           await f.copy(newPath);
           if (await File(newPath).exists()) {
             await f.delete();
             count++;
+            debugPrint("Moved file: $id -> $newPath");
           }
-        } catch (e) {}
+        } catch (e, stackTrace) {
+          debugPrintStack(
+            label: "Error moving file $id: $e",
+            stackTrace: stackTrace,
+          );
+        }
       }
     }
 
@@ -391,37 +530,21 @@ class _DashboardPageState extends State<DashboardPage> {
                               for (var entry in _groupedGallery.entries) ...[
                                 SliverToBoxAdapter(
                                   child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(
-                                      24,
-                                      24,
-                                      24,
-                                      12,
-                                    ),
+                                    padding: UIConstants.sectionPadding,
                                     child: Text(
                                       entry.key.toUpperCase(),
                                       style: TextStyle(
                                         color: Colors.white.withOpacity(0.8),
-                                        fontSize: 12,
+                                        fontSize:
+                                            UIConstants.sectionHeaderFontSize,
                                         fontWeight: FontWeight.bold,
-                                        letterSpacing: 1.5,
                                       ),
                                     ),
                                   ),
                                 ),
                                 SliverPadding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
+                                  padding: UIConstants.gridPadding,
                                   sliver: SliverGrid(
-                                    gridDelegate:
-                                        SliverGridDelegateWithMaxCrossAxisExtent(
-                                          maxCrossAxisExtent: _isMobile
-                                              ? 120
-                                              : 180,
-                                          mainAxisSpacing: 8,
-                                          crossAxisSpacing: 8,
-                                          childAspectRatio: 1.0,
-                                        ),
                                     delegate: SliverChildBuilderDelegate((
                                       ctx,
                                       i,
@@ -437,11 +560,27 @@ class _DashboardPageState extends State<DashboardPage> {
                                             _toggleSelection(asset.id),
                                       );
                                     }, childCount: entry.value.length),
+                                    gridDelegate:
+                                        SliverGridDelegateWithMaxCrossAxisExtent(
+                                          maxCrossAxisExtent: _isMobile
+                                              ? UIConstants
+                                                    .mobileGridMaxCrossAxisExtent
+                                              : UIConstants
+                                                    .desktopGridMaxCrossAxisExtent,
+                                          mainAxisSpacing:
+                                              UIConstants.gridMainAxisSpacing,
+                                          crossAxisSpacing:
+                                              UIConstants.gridCrossAxisSpacing,
+                                          childAspectRatio:
+                                              UIConstants.gridChildAspectRatio,
+                                        ),
                                   ),
                                 ),
                               ],
                               const SliverToBoxAdapter(
-                                child: SizedBox(height: 100),
+                                child: SizedBox(
+                                  height: UIConstants.bottomSliverSpacing,
+                                ),
                               ),
                             ],
                           ),
@@ -452,25 +591,36 @@ class _DashboardPageState extends State<DashboardPage> {
 
             if (_isSelectionMode)
               Positioned(
-                bottom: 30,
-                left: 40,
-                right: 40,
+                bottom: UIConstants.bottomActionBarBottomMargin,
+                left: UIConstants.bottomActionBarSideMargin,
+                right: UIConstants.bottomActionBarSideMargin,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(
+                    UIConstants.bottomActionBarBorderRadius,
+                  ),
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    filter: ImageFilter.blur(
+                      sigmaX: UIConstants.glassBlurSigma,
+                      sigmaY: UIConstants.glassBlurSigma,
+                    ),
                     child: Container(
-                      height: 60,
+                      height: UIConstants.bottomActionBarHeight,
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
-                        borderRadius: BorderRadius.circular(30),
+                        color: Colors.black.withOpacity(
+                          UIConstants.glassBackgroundOpacity,
+                        ),
+                        borderRadius: BorderRadius.circular(
+                          UIConstants.bottomActionBarBorderRadius,
+                        ),
                         border: Border.all(
                           color: Colors.white.withOpacity(0.1),
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.5),
-                            blurRadius: 20,
+                            color: Colors.black.withOpacity(
+                              UIConstants.glassBlurShadowOpacity,
+                            ),
+                            blurRadius: UIConstants.glassBlurShadowBlurRadius,
                             offset: const Offset(0, 10),
                           ),
                         ],
@@ -526,9 +676,13 @@ class _NavBarIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
-      icon: Icon(icon, color: color.withOpacity(0.8), size: 22),
+      icon: Icon(
+        icon,
+        color: color.withOpacity(0.8),
+        size: UIConstants.navBarIconSize,
+      ),
       onPressed: onTap,
-      splashRadius: 20,
+      splashRadius: UIConstants.navBarSplashRadius,
     );
   }
 }

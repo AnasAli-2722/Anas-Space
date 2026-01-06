@@ -13,8 +13,7 @@ import 'features/sync/presentation/cubit/sync_cubit.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  bool isDesktop =
-      !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+  bool isDesktop = !kIsWeb && Platform.isWindows;
 
   if (isDesktop) {
     await windowManager.ensureInitialized();
@@ -37,7 +36,10 @@ void main() async {
     databaseFactory = databaseFactoryFfi;
   }
 
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 500 * 1024 * 1024;
+  // Keep desktop fast, but avoid OOM on Android devices.
+  PaintingBinding.instance.imageCache.maximumSizeBytes = isDesktop
+      ? 500 * 1024 * 1024
+      : 150 * 1024 * 1024;
 
   final galleryService = GalleryService();
   final syncRepo = SyncRepositoryImpl(galleryService: galleryService);

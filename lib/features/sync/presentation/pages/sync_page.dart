@@ -15,7 +15,15 @@ class SyncPage extends StatefulWidget {
 
 class _SyncPageState extends State<SyncPage> {
   final TextEditingController _ipController = TextEditingController();
-  final bool _isDesktop = !Platform.isAndroid && !Platform.isIOS;
+  final TextEditingController _tokenController = TextEditingController();
+  final bool _isDesktop = Platform.isWindows;
+
+  @override
+  void dispose() {
+    _ipController.dispose();
+    _tokenController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +107,9 @@ class _SyncPageState extends State<SyncPage> {
   }
 
   Widget _buildStatusCard(SyncState state, BuildContext context) {
+    if (_tokenController.text != state.pairingToken) {
+      _tokenController.text = state.pairingToken;
+    }
     return Container(
       color: state.isServerRunning
           ? Colors.green.shade900.withOpacity(0.2)
@@ -127,6 +138,21 @@ class _SyncPageState extends State<SyncPage> {
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
+              ),
+            ),
+          const SizedBox(width: 12),
+          if (state.isServerRunning)
+            SizedBox(
+              width: 140,
+              child: TextField(
+                controller: _tokenController,
+                style: const TextStyle(color: Colors.white, fontSize: 12),
+                decoration: const InputDecoration(
+                  labelText: "Pair Code",
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                readOnly: true,
               ),
             ),
           const Spacer(),
@@ -201,6 +227,17 @@ class _SyncPageState extends State<SyncPage> {
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
+          TextField(
+            controller: _tokenController,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              labelText: "Pairing Code (must match peer)",
+              border: OutlineInputBorder(),
+              hintText: "e.g. 123456",
+            ),
+            onChanged: (v) => context.read<SyncCubit>().setPairingToken(v),
+          ),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(

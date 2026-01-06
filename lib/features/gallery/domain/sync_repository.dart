@@ -8,7 +8,9 @@ abstract class SyncRepository {
   Stream<List<UnifiedAsset>> get remoteAssets;
 
   //---------*Actions*---------
-  Future<void> startServer();
-  void connectToDevice(String ip);
+  Future<String> startServer({required String pairingToken});
+  void connectToDevice(String ip, {required String pairingToken});
   void stopServer();
+
+  void dispose();
 }
