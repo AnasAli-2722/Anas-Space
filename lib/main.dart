@@ -12,43 +12,36 @@ import 'features/sync/presentation/cubit/sync_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await windowManager.ensureInitialized();
 
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+  // 1. Check if we are on a Desktop platform BEFORE using window_manager
+  bool isDesktop =
+      !kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
+
+  if (isDesktop) {
+    // Only initialize window manager on desktop
+    await windowManager.ensureInitialized();
+
     WindowOptions windowOptions = const WindowOptions(
       size: Size(1280, 720),
-      center: true,
-      backgroundColor: Colors.transparent,
-      skipTaskbar: false,
-      titleBarStyle: TitleBarStyle.hidden,
-    );
-
-    windowManager.waitUntilReadyToShow(windowOptions, () async {
-      await windowManager.show();
-      await windowManager.focus();
-    });
-  }
-
-  PaintingBinding.instance.imageCache.maximumSizeBytes = 500 * 1024 * 1024;
-  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
-  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-    await windowManager.ensureInitialized();
-    WindowOptions windowOptions = const WindowOptions(
-      size: Size(1280, 850),
       minimumSize: Size(400, 600),
       center: true,
       backgroundColor: Colors.transparent,
       skipTaskbar: false,
       titleBarStyle: TitleBarStyle.hidden,
     );
+
     windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();
       await windowManager.focus();
     });
+
+    // Initialize FFI for desktop databases
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
   }
+
+  // This is safe to run on mobile
+  PaintingBinding.instance.imageCache.maximumSizeBytes = 500 * 1024 * 1024;
 
   final galleryService = GalleryService();
   final syncRepo = SyncRepositoryImpl(galleryService: galleryService);
