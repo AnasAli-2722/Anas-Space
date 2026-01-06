@@ -5,11 +5,9 @@ import '../domain/unified_asset.dart';
 import '../domain/album_model.dart';
 
 class GalleryService {
-  //---------*Variables & Cache*---------
   List<UnifiedAsset> _cachedAssets = [];
   List<UnifiedAsset> get cachedAssets => _cachedAssets;
 
-  // Folders or keywords to exclude from scans
   final List<String> _ignoredKeywords = [
     "2021",
     "2022",
@@ -19,7 +17,6 @@ class GalleryService {
     "2026",
   ];
 
-  //---------*WhatsApp Scanner (Android)*---------
   Future<List<UnifiedAsset>> scanWhatsAppRaw() async {
     List<UnifiedAsset> found = [];
 
@@ -45,7 +42,6 @@ class GalleryService {
         if (!await specificPath.exists()) continue;
 
         try {
-          // Recursive scan for files
           final entities = specificPath.list(
             recursive: true,
             followLinks: false,
@@ -56,7 +52,6 @@ class GalleryService {
               final path = entity.path;
               final lowerPath = path.toLowerCase();
 
-              // Skip Sent and Private folders to avoid duplicates
               if (path.contains("/Sent/") || path.contains("/Private/")) {
                 continue;
               }
@@ -81,9 +76,7 @@ class GalleryService {
     return found;
   }
 
-  //---------*Mobile Scanner*---------
   Future<List<UnifiedAsset>> scanMobileGallery() async {
-    // Permission Check
     final PermissionState ps = await PhotoManager.requestPermissionExtend();
     if (!ps.isAuth) {
       await Permission.storage.request();
@@ -92,7 +85,6 @@ class GalleryService {
 
     List<UnifiedAsset> foundAssets = [];
 
-    // Standard PhotoManager Scan
     final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
       type: RequestType.common,
     );
@@ -117,20 +109,16 @@ class GalleryService {
       }
     }
 
-    // specific WhatsApp Scan (Android only)
     List<UnifiedAsset> hiddenWhatsApp = [];
     if (Platform.isAndroid) {
       hiddenWhatsApp = await scanWhatsAppRaw();
     }
 
-    // Merge Lists into Master Cache
     Map<String, UnifiedAsset> uniqueAssets = {};
     for (var asset in foundAssets) uniqueAssets[asset.id] = asset;
     for (var asset in hiddenWhatsApp) uniqueAssets[asset.id] = asset;
 
     _cachedAssets = uniqueAssets.values.toList();
-
-    // Filter for Dashboard (Exclude WhatsApp items to avoid clutter)
     final cleanDashboardList = _cachedAssets.where((asset) {
       if (asset.localFile != null) {
         return !asset.localFile!.path.toLowerCase().contains("whatsapp");
@@ -145,7 +133,6 @@ class GalleryService {
     return cleanDashboardList;
   }
 
-  //---------*Desktop Scanner*---------
   Future<List<UnifiedAsset>> scanDesktopGallery() async {
     List<File> files = [];
     final userProfile = Platform.environment['USERPROFILE'];
@@ -171,7 +158,6 @@ class GalleryService {
             if (file is File) {
               final path = file.path.toLowerCase();
 
-              // Apply blacklist filter
               bool isBlocked = _ignoredKeywords.any(
                 (k) => path.contains(k.toLowerCase()),
               );
@@ -182,9 +168,7 @@ class GalleryService {
               }
             }
           }
-        } catch (e) {
-          // Access denied or system file error
-        }
+        } catch (e) {}
       }
     }
 
@@ -202,12 +186,10 @@ class GalleryService {
     return _cachedAssets;
   }
 
-  //---------*Album Fetching*---------
   Future<List<UnifiedAlbum>> fetchAlbums() async {
     List<UnifiedAlbum> albums = [];
     Map<String, UnifiedAlbum> albumMap = {};
 
-    // 1. Mobile Standard Albums
     if (Platform.isAndroid || Platform.isIOS) {
       final paths = await PhotoManager.getAssetPathList(
         type: RequestType.common,
@@ -237,7 +219,6 @@ class GalleryService {
       }
     }
 
-    // 2. Hidden/Raw Files Processing
     final hiddenAssets = _cachedAssets
         .where((a) => a.deviceAsset == null && a.localFile != null)
         .toList();
@@ -261,8 +242,6 @@ class GalleryService {
         coverAsset: assets.first,
       );
     });
-
-    // 3. Desktop Logic
     if (!Platform.isAndroid && !Platform.isIOS) {
       if (_cachedAssets.isEmpty) await scanDesktopGallery();
 
@@ -287,7 +266,6 @@ class GalleryService {
       });
     }
 
-    // 4. Final Sort
     albums = albumMap.values.toList();
     albums.sort((a, b) {
       final nameA = a.name.toLowerCase();
@@ -306,7 +284,6 @@ class GalleryService {
     return albums;
   }
 
-  //---------*Locker Scanner*---------
   Future<List<UnifiedAsset>> scanLocker(String lockerPath) async {
     final dir = Directory(lockerPath);
     List<File> files = [];
@@ -325,7 +302,6 @@ class GalleryService {
         .toList();
   }
 
-  //---------*Helpers*---------
   bool _isValidMediaExtension(String path) {
     return path.endsWith('.jpg') ||
         path.endsWith('.jpeg') ||
