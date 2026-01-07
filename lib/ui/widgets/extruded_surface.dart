@@ -12,6 +12,8 @@ class ExtrudedSurface extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final double radius;
   final double depth;
+  final double intensity;
+  final bool extraShadow;
   final Color? color;
   final bool pressed;
 
@@ -22,6 +24,8 @@ class ExtrudedSurface extends StatelessWidget {
     this.padding = EdgeInsets.zero,
     this.radius = 16,
     this.depth = 8,
+    this.intensity = 1.0,
+    this.extraShadow = false,
     this.color,
     this.pressed = false,
   });
@@ -32,17 +36,32 @@ class ExtrudedSurface extends StatelessWidget {
     final base = color ?? theme.scaffoldBackgroundColor;
 
     // Keep everything monochrome by deriving highlight/shadow from the base.
-    final highlight = _shiftLightness(
+    final double baseHighlightAlpha = theme.brightness == Brightness.dark
+        ? 0.75
+        : 0.55;
+    final double baseShadeAlpha = theme.brightness == Brightness.dark
+        ? 0.75
+        : 0.28;
+
+    final highlightBase = _shiftLightness(
       base,
       theme.brightness == Brightness.dark ? 0.10 : 0.06,
-    ).withValues(alpha: theme.brightness == Brightness.dark ? 0.75 : 0.55);
-    final shade = _shiftLightness(
+    );
+    final shadeBase = _shiftLightness(
       base,
       theme.brightness == Brightness.dark ? -0.14 : -0.10,
-    ).withValues(alpha: theme.brightness == Brightness.dark ? 0.75 : 0.28);
+    );
 
-    final dx = pressed ? -depth : depth;
-    final dy = pressed ? -depth : depth;
+    final highlight = highlightBase.withValues(
+      alpha: (baseHighlightAlpha * intensity).clamp(0.0, 1.0),
+    );
+    final shade = shadeBase.withValues(
+      alpha: (baseShadeAlpha * intensity).clamp(0.0, 1.0),
+    );
+
+    final depthEffective = depth * intensity;
+    final dx = pressed ? -depthEffective : depthEffective;
+    final dy = pressed ? -depthEffective : depthEffective;
 
     final decoration = BoxDecoration(
       color: base,
@@ -50,14 +69,20 @@ class ExtrudedSurface extends StatelessWidget {
       boxShadow: [
         BoxShadow(
           color: highlight,
-          blurRadius: depth * 2.2,
+          blurRadius: depthEffective * 2.2,
           offset: Offset(-dx, -dy),
         ),
         BoxShadow(
           color: shade,
-          blurRadius: depth * 2.2,
+          blurRadius: depthEffective * 2.2,
           offset: Offset(dx, dy),
         ),
+        if (extraShadow)
+          BoxShadow(
+            color: Colors.black.withOpacity((0.12 * intensity).clamp(0.0, 0.6)),
+            blurRadius: depthEffective * 2.8,
+            offset: Offset(0, depthEffective * 0.8),
+          ),
       ],
     );
 

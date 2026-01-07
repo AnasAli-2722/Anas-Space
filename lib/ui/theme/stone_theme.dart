@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 class StoneThemes {
   static const _seed = Color(0xFF5B6772);
 
-  // Light: warm paper / stone white
-  static const Color _paperBg = Color(0xFFF3EFE6);
-  static const Color _paperSurface = Color(0xFFF8F4EC);
+  // Light: off-white background and slightly warm surfaces (muted, not yellow)
+  static const Color _paperBg = Color(0xFFFAF9F7);
+  static const Color _paperSurface = Color(0xFFF1ECE6);
 
   // Dark: matte charcoal
   static const Color _charcoalBg = Color(0xFF111212);
@@ -22,7 +22,7 @@ class StoneThemes {
       primary: const Color(0xFF556673),
       secondary: const Color(0xFF6F6B63),
       tertiary: const Color(0xFF7A6A57),
-      outline: const Color(0xFFC3BBAE),
+      outline: const Color.fromARGB(255, 206, 189, 162),
       shadow: const Color(0xFF000000),
       surfaceTint: Colors.transparent,
       onSurface: const Color(0xFF1D1B18),
@@ -34,8 +34,8 @@ class StoneThemes {
       fontFamily: 'Segoe UI',
       colorScheme: scheme,
       scaffoldBackgroundColor: _paperBg,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: _paperSurface,
+      appBarTheme: AppBarTheme(
+        backgroundColor: scheme.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
       ),
@@ -45,12 +45,12 @@ class StoneThemes {
         space: 1,
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: _paperSurface,
+        backgroundColor: scheme.surface,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       cardTheme: CardThemeData(
-        color: _paperSurface,
+        color: scheme.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

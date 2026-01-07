@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Widget to wrap glitch text effect with shader
 class GlitchText extends StatefulWidget {
   final String text;
   final TextStyle? style;
@@ -47,7 +46,6 @@ class _GlitchTextState extends State<GlitchText>
   }
 }
 
-/// Neon border container with optional pulsing glow
 class NeonBorder extends StatelessWidget {
   final Widget child;
   final Color color;
@@ -91,7 +89,6 @@ class NeonBorder extends StatelessWidget {
   }
 }
 
-/// Cyberpunk-styled button with holographic effect
 class CyberpunkButton extends StatefulWidget {
   final VoidCallback onPressed;
   final Widget child;

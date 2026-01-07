@@ -22,14 +22,32 @@ class GlassAppBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDesktop = Platform.isWindows;
     final cs = Theme.of(context).colorScheme;
-    final base = Theme.of(context).scaffoldBackgroundColor;
+    // Use the theme surface as the app bar base so it contrasts with
+    // scaffoldBackgroundColor. Apply a stronger warm tint in light mode
+    // to make the bar pop.
+    final baseSurface = cs.surface;
+    Color surfaceColor = baseSurface;
+    if (Theme.of(context).brightness == Brightness.light) {
+      final hsl = HSLColor.fromColor(baseSurface);
+      // Subtle warm nudge without pushing into yellow — smaller hue shift and
+      // slight saturation increase while keeping it a touch darker for contrast.
+      surfaceColor = hsl
+          .withHue((hsl.hue + 8) % 360)
+          .withSaturation((hsl.saturation + 0.02).clamp(0.0, 1.0))
+          .withLightness((hsl.lightness - 0.02).clamp(0.0, 1.0))
+          .toColor();
+    }
+    final brightness = Theme.of(context).brightness;
+    final double intensity = brightness == Brightness.light ? 2.0 : 1.0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ExtrudedSurface(
         radius: 20,
-        depth: 10,
-        color: base,
+        depth: brightness == Brightness.light ? 12 : 10,
+        intensity: intensity,
+        extraShadow: brightness == Brightness.light,
+        color: surfaceColor,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Row(
           children: [
@@ -89,12 +107,14 @@ class GlassAppBar extends StatelessWidget {
               _WindowButton(
                 icon: Icons.remove,
                 color: cs.onSurface,
+                depth: brightness == Brightness.light ? 8 : 5,
                 onTap: () async => await windowManager.minimize(),
               ),
               // Maximize / Restore
               _WindowButton(
                 icon: Icons.crop_square,
                 color: cs.onSurface,
+                depth: brightness == Brightness.light ? 8 : 5,
                 onTap: () async {
                   if (await windowManager.isMaximized()) {
                     windowManager.unmaximize();
@@ -106,6 +126,7 @@ class GlassAppBar extends StatelessWidget {
               _WindowButton(
                 icon: Icons.close,
                 color: cs.error,
+                depth: brightness == Brightness.light ? 8 : 5,
                 onTap: () async => await windowManager.close(),
               ),
             ],
@@ -120,11 +141,13 @@ class _WindowButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final Color color;
+  final double depth;
 
   const _WindowButton({
     required this.icon,
     required this.onTap,
     required this.color,
+    this.depth = 5,
   });
 
   @override
@@ -138,7 +161,7 @@ class _WindowButton extends StatelessWidget {
       onTap: onTap,
       size: 34,
       radius: 10,
-      depth: 5,
+      depth: depth,
       iconColor: isClose ? cs.error : cs.onSurface.withValues(alpha: 0.85),
       surfaceColor: Theme.of(context).scaffoldBackgroundColor,
     );

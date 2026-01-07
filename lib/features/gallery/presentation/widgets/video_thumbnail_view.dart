@@ -23,6 +23,10 @@ class _VideoThumbnailViewState extends State<VideoThumbnailView> {
 
   Future<void> _loadThumbnail() async {
     try {
+      if (!(Platform.isAndroid || Platform.isIOS)) {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
       final cacheDir = await getTemporaryDirectory();
 
       final uniqueName = "thumb_${widget.videoFile.path.hashCode}.jpg";

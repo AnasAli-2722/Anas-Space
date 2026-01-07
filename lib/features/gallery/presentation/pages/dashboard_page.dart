@@ -729,7 +729,7 @@ class _NavBarIcon extends StatelessWidget {
         onTap: onTap,
         size: 40,
         radius: 14,
-        depth: 6,
+        depth: Theme.of(context).brightness == Brightness.light ? 8 : 6,
         iconColor: iconColor,
       ),
     );
