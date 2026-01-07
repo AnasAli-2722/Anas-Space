@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 BoxShadow subtleBoxShadow(
   BuildContext context, {
   Color? color,
@@ -15,11 +14,12 @@ BoxShadow subtleBoxShadow(
   final brightness = Theme.of(context).brightness;
   final isDark = brightness == Brightness.dark;
   final base = color ?? Theme.of(context).colorScheme.shadow;
-
+  final alpha = isDark ? darkAlpha : lightAlpha;
   return BoxShadow(
-    color: base.withOpacity(isDark ? darkAlpha : lightAlpha),
+    color: base.withValues(alpha: base.a * alpha),
     blurRadius: isDark ? darkBlur : lightBlur,
     offset: isDark ? darkOffset : lightOffset,
     spreadRadius: isDark ? darkSpread : lightSpread,
   );
 }
+

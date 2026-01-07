@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
-import 'dart:math';
-
 class CustomTitleBar extends StatelessWidget {
   const CustomTitleBar({super.key});
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -36,19 +33,21 @@ class CustomTitleBar extends StatelessWidget {
     );
   }
 }
-
 class WindowCaptionButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onPressed;
   final bool isClose;
+  // ignore: prefer_const_constructors_in_immutables
   WindowCaptionButton.minimize({super.key})
     : icon = Icons.remove,
       onPressed = windowManager.minimize,
       isClose = false;
+  // ignore: prefer_const_constructors_in_immutables
   WindowCaptionButton.maximize({super.key})
     : icon = Icons.crop_square,
       onPressed = _toggleMax,
       isClose = false;
+  // ignore: prefer_const_constructors_in_immutables
   WindowCaptionButton.close({super.key})
     : icon = Icons.close,
       onPressed = windowManager.close,
@@ -60,7 +59,6 @@ class WindowCaptionButton extends StatelessWidget {
       windowManager.maximize();
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -69,7 +67,7 @@ class WindowCaptionButton extends StatelessWidget {
         onTap: onPressed,
         hoverColor: isClose
             ? const Color(0xFFE81123)
-            : Colors.white.withOpacity(0.2),
+            : const Color.fromARGB(51, 255, 255, 255),
         child: Container(
           width: 46,
           height: double.infinity,
@@ -80,24 +78,20 @@ class WindowCaptionButton extends StatelessWidget {
     );
   }
 }
-
 class GrainPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint();
-
-    // Reduced from 40,000 to 6,000 to speed up first frame significantly.
-    // Also deterministic pattern (no Random allocations).
     const int n = 6000;
     for (int i = 0; i < n; i++) {
       final dx = (i * 23.0) % size.width;
       final dy = (i * 11.0) % size.height;
       final a = ((i % 100) / 100.0) * 0.02; // 0..0.02
-      paint.color = Colors.white.withOpacity(a);
+      paint.color = Color.fromARGB((a * 255).toInt(), 255, 255, 255);
       canvas.drawCircle(Offset(dx, dy), 0.7, paint);
     }
   }
-
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

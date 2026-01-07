@@ -3,35 +3,28 @@ import '../../gallery/domain/album_model.dart';
 import '../presentation/widgets/asset_tile.dart';
 import '../../gallery/domain/unified_asset.dart';
 import '../../../ui/widgets/stone_theme_switch.dart';
-
 class AlbumContentPage extends StatefulWidget {
   final UnifiedAlbum album;
   const AlbumContentPage({super.key, required this.album});
-
   @override
   State<AlbumContentPage> createState() => _AlbumContentPageState();
 }
-
 class _AlbumContentPageState extends State<AlbumContentPage> {
   List<UnifiedAsset> _assets = [];
   bool _isLoading = true;
-
   @override
   void initState() {
     super.initState();
     _loadAssets();
   }
-
   Future<void> _loadAssets() async {
     List<UnifiedAsset> loaded = [];
-
     if (widget.album.mobileAlbum != null) {
       final count = await widget.album.mobileAlbum!.assetCountAsync;
       final entities = await widget.album.mobileAlbum!.getAssetListRange(
         start: 0,
         end: count,
       );
-
       loaded = entities
           .map(
             (e) => UnifiedAsset(
@@ -45,7 +38,6 @@ class _AlbumContentPageState extends State<AlbumContentPage> {
     } else if (widget.album.desktopAssets != null) {
       loaded = widget.album.desktopAssets!;
     }
-
     if (mounted) {
       setState(() {
         _assets = loaded;
@@ -53,14 +45,11 @@ class _AlbumContentPageState extends State<AlbumContentPage> {
       });
     }
   }
-
   @override
   Widget build(BuildContext context) {
     final bool isDesktop = MediaQuery.of(context).size.width > 600;
     final double screenWidth = MediaQuery.of(context).size.width;
-
-    // Responsive cross axis count
-    int crossAxisCount;
+    late int crossAxisCount;
     if (screenWidth > 1200) {
       crossAxisCount = 6;
     } else if (screenWidth > 800) {
@@ -70,10 +59,8 @@ class _AlbumContentPageState extends State<AlbumContentPage> {
     } else {
       crossAxisCount = 2;
     }
-
     final double spacing = isDesktop ? 10 : 6;
     final double padding = isDesktop ? 16 : 10;
-
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -120,8 +107,8 @@ class _AlbumContentPageState extends State<AlbumContentPage> {
           ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
           : GridView.builder(
               padding: EdgeInsets.all(padding),
-              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 150,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
                 mainAxisSpacing: spacing,
                 crossAxisSpacing: spacing,
               ),
@@ -136,3 +123,4 @@ class _AlbumContentPageState extends State<AlbumContentPage> {
     );
   }
 }
+

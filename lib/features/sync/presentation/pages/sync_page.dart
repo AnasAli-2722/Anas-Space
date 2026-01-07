@@ -7,30 +7,24 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../cubit/sync_state.dart';
 import '../../../../ui/widgets/stone_theme_switch.dart';
 import '../../../../ui/helpers/shadow_helpers.dart';
-
 class SyncPage extends StatefulWidget {
   const SyncPage({super.key});
-
   @override
   State<SyncPage> createState() => _SyncPageState();
 }
-
 class _SyncPageState extends State<SyncPage> {
   final TextEditingController _ipController = TextEditingController();
   final TextEditingController _tokenController = TextEditingController();
   final bool _isDesktop = Platform.isWindows;
-
   @override
   void dispose() {
     _ipController.dispose();
     _tokenController.dispose();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-
     return BlocBuilder<SyncCubit, SyncState>(
       builder: (context, state) {
         return DefaultTabController(
@@ -40,7 +34,6 @@ class _SyncPageState extends State<SyncPage> {
               children: [
                 if (_isDesktop) const CustomTitleBar(),
                 if (!_isDesktop) const SafeArea(child: SizedBox(height: 10)),
-
                 Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -110,7 +103,6 @@ class _SyncPageState extends State<SyncPage> {
                           ],
                         ),
                       ),
-                      // Tabs
                       TabBar(
                         indicatorColor: cs.primary,
                         indicatorWeight: 3,
@@ -133,9 +125,7 @@ class _SyncPageState extends State<SyncPage> {
                     ],
                   ),
                 ),
-
                 _buildStatusCard(state, context),
-
                 Expanded(
                   child: TabBarView(
                     children: [
@@ -151,10 +141,8 @@ class _SyncPageState extends State<SyncPage> {
       },
     );
   }
-
   Widget _buildStatusCard(SyncState state, BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-
     final nextText = state.pairingToken;
     if (_tokenController.text != nextText) {
       _tokenController.value = _tokenController.value.copyWith(
@@ -163,10 +151,8 @@ class _SyncPageState extends State<SyncPage> {
         composing: TextRange.empty,
       );
     }
-
     final bool isOnline = state.isServerRunning;
     final Color statusColor = isOnline ? cs.primary : cs.error;
-
     return Container(
       decoration: BoxDecoration(
         color: cs.surface,
@@ -265,10 +251,8 @@ class _SyncPageState extends State<SyncPage> {
       ),
     );
   }
-
   Widget _buildRemoteGalleryTab(BuildContext context, SyncState state) {
     final cs = Theme.of(context).colorScheme;
-
     if (state.remoteAssets.isEmpty) {
       return Center(
         child: Column(
@@ -291,7 +275,6 @@ class _SyncPageState extends State<SyncPage> {
         ),
       );
     }
-
     return GridView.builder(
       padding: const EdgeInsets.all(10),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -304,7 +287,6 @@ class _SyncPageState extends State<SyncPage> {
       itemBuilder: (context, index) {
         final asset = state.remoteAssets[index];
         if (asset.remoteUrl == null) return const SizedBox();
-
         return Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
@@ -348,15 +330,12 @@ class _SyncPageState extends State<SyncPage> {
       },
     );
   }
-
   Widget _buildConnectionTab(BuildContext context, SyncState state) {
     final cs = Theme.of(context).colorScheme;
-
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          // Pairing Code Field
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -392,7 +371,6 @@ class _SyncPageState extends State<SyncPage> {
             ),
           ),
           const SizedBox(height: 16),
-          // IP Connection Row
           Row(
             children: [
               Expanded(
@@ -458,7 +436,6 @@ class _SyncPageState extends State<SyncPage> {
             ],
           ),
           const SizedBox(height: 16),
-          // Terminal Logs
           Expanded(
             child: Container(
               padding: const EdgeInsets.all(12),
@@ -488,3 +465,4 @@ class _SyncPageState extends State<SyncPage> {
     );
   }
 }
+

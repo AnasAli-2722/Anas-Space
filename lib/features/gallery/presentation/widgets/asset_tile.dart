@@ -5,13 +5,11 @@ import '../../../../ui/helpers/shadow_helpers.dart';
 import '../../domain/unified_asset.dart';
 import '../pages/asset_viewer_page.dart';
 import 'video_thumbnail_view.dart';
-
 class AssetTile extends StatelessWidget {
   final UnifiedAsset asset;
   final bool isSelected;
   final bool isSelectionMode;
   final VoidCallback onSelect;
-
   const AssetTile({
     super.key,
     required this.asset,
@@ -19,7 +17,6 @@ class AssetTile extends StatelessWidget {
     required this.isSelectionMode,
     required this.onSelect,
   });
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -35,7 +32,6 @@ class AssetTile extends StatelessWidget {
           path.endsWith('.3gp') ||
           path.endsWith('.mkv');
     }
-
     return GestureDetector(
       onTap: isSelectionMode
           ? onSelect
@@ -82,7 +78,6 @@ class AssetTile extends StatelessWidget {
               ),
             ),
           ),
-
           if (isVideo)
             Center(
               child: Container(
@@ -110,7 +105,6 @@ class AssetTile extends StatelessWidget {
                 ),
               ),
             ),
-
           if (isSelected)
             Positioned.fill(
               child: Container(
@@ -150,7 +144,6 @@ class AssetTile extends StatelessWidget {
       ),
     );
   }
-
   Widget _buildImageContent(BuildContext context, bool isVideo) {
     if (asset.deviceAsset != null) {
       return AssetEntityImage(
@@ -163,12 +156,10 @@ class AssetTile extends StatelessWidget {
         },
       );
     }
-
     if (asset.localFile != null) {
       if (isVideo) {
         return VideoThumbnailView(videoFile: asset.localFile!);
       }
-
       return Image.file(
         asset.localFile!,
         fit: BoxFit.cover,
@@ -180,7 +171,7 @@ class AssetTile extends StatelessWidget {
         },
       );
     }
-
     return Container();
   }
 }
+

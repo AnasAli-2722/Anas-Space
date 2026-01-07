@@ -4,35 +4,25 @@ import '../../data/gallery_service.dart';
 import '../../../../core/services/trash_service.dart';
 import '../../../../ui/widgets/stone_theme_switch.dart';
 import '../../../../ui/helpers/shadow_helpers.dart';
-
 class TrashPage extends StatefulWidget {
   final GalleryService galleryService;
   const TrashPage({super.key, required this.galleryService});
-
   @override
   State<TrashPage> createState() => _TrashPageState();
 }
-
 class _TrashPageState extends State<TrashPage> {
   late Future<List<TrashItem>> _trashItems;
-
-  // Cache: prevents recalculating on every rebuild.
   late Future<String> _trashSize;
-
   @override
   void initState() {
     super.initState();
     _loadTrash();
   }
-
   void _loadTrash() {
     _trashItems =
         widget.galleryService.trashService?.listTrash() ?? Future.value([]);
-
-    // Important: don't call _getTrashSize() directly from build.
     _trashSize = _getTrashSize();
   }
-
   Future<void> _restoreItem(TrashItem item) async {
     try {
       await widget.galleryService.trashService?.restore(item.trashedPath);
@@ -52,18 +42,13 @@ class _TrashPageState extends State<TrashPage> {
       ).showSnackBar(const SnackBar(content: Text("Failed to restore item")));
     }
   }
-
   Future<void> _deleteItem(TrashItem item) async {
     final cs = Theme.of(context).colorScheme;
     final confirm = await showDialog<bool>(
       context: context,
       barrierColor: cs.scrim.withValues(alpha: 0.55),
       builder: (ctx) => AlertDialog(
-        backgroundColor: cs.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: cs.outlineVariant, width: 1),
-        ),
+        surfaceTintColor: cs.surface,
         title: Text(
           "PERMANENTLY DELETE?",
           style: TextStyle(
@@ -95,7 +80,6 @@ class _TrashPageState extends State<TrashPage> {
         ],
       ),
     );
-
     if (confirm == true) {
       try {
         await widget.galleryService.trashService?.permanentlyDelete(
@@ -116,18 +100,13 @@ class _TrashPageState extends State<TrashPage> {
       }
     }
   }
-
   Future<void> _emptyTrash() async {
     final cs = Theme.of(context).colorScheme;
     final confirm = await showDialog<bool>(
       context: context,
       barrierColor: cs.scrim.withValues(alpha: 0.55),
       builder: (ctx) => AlertDialog(
-        backgroundColor: cs.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: cs.outlineVariant, width: 1),
-        ),
+        surfaceTintColor: cs.surface,
         title: Text(
           "EMPTY TRASH?",
           style: TextStyle(
@@ -159,7 +138,6 @@ class _TrashPageState extends State<TrashPage> {
         ],
       ),
     );
-
     if (confirm == true) {
       try {
         final count =
@@ -179,12 +157,10 @@ class _TrashPageState extends State<TrashPage> {
       }
     }
   }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final bool isDesktop = MediaQuery.of(context).size.width > 600;
-
     return Scaffold(
       appBar: AppBar(
         actions: const [StoneThemeSwitch()],
@@ -213,7 +189,6 @@ class _TrashPageState extends State<TrashPage> {
               child: CircularProgressIndicator(strokeWidth: 2),
             );
           }
-
           if (snapshot.hasError) {
             return Center(
               child: Column(
@@ -232,9 +207,7 @@ class _TrashPageState extends State<TrashPage> {
               ),
             );
           }
-
           final items = snapshot.data ?? [];
-
           if (items.isEmpty) {
             return Center(
               child: Column(
@@ -259,7 +232,6 @@ class _TrashPageState extends State<TrashPage> {
               ),
             );
           }
-
           return Column(
             children: [
               Container(
@@ -386,13 +358,6 @@ class _TrashPageState extends State<TrashPage> {
                         ),
                         trailing: PopupMenuButton(
                           color: cs.surface,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            side: BorderSide(
-                              color: cs.outlineVariant.withValues(alpha: 0.85),
-                              width: 1.5,
-                            ),
-                          ),
                           icon: Icon(
                             Icons.more_vert,
                             color: cs.onSurface.withValues(alpha: 0.8),
@@ -498,7 +463,6 @@ class _TrashPageState extends State<TrashPage> {
       ),
     );
   }
-
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final diff = now.difference(date);
@@ -508,7 +472,6 @@ class _TrashPageState extends State<TrashPage> {
     if (diff.inDays < 30) return "${diff.inDays}d ago";
     return "${date.month}/${date.day}/${date.year}";
   }
-
   Future<String> _getTrashSize() async {
     final bytes = await widget.galleryService.trashService?.getTrashSize() ?? 0;
     if (bytes < 1024) {
@@ -523,3 +486,4 @@ class _TrashPageState extends State<TrashPage> {
     return "${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB";
   }
 }
+

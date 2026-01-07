@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-
 class HoloCard extends StatefulWidget {
   final Widget child;
   final double borderRadius;
   final EdgeInsets padding;
   final bool enableShader;
-
   const HoloCard({
     super.key,
     required this.child,
@@ -13,30 +11,23 @@ class HoloCard extends StatefulWidget {
     this.padding = const EdgeInsets.all(2.0),
     this.enableShader = true,
   });
-
   @override
   State<HoloCard> createState() => _HoloCardState();
 }
-
 class _HoloCardState extends State<HoloCard>
     with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
-    // Keep API compatibility, but the new design is matte stone (no shaders).
-    // `enableShader` is now ignored by design.
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-
     final outer = cs.surface;
     final inner =
         Color.lerp(cs.surface, cs.onSurface, isDark ? 0.05 : 0.03) ??
         cs.surface;
-
     final shadow = Colors.black.withValues(alpha: isDark ? 0.40 : 0.10);
     final highlight = Colors.white.withValues(alpha: isDark ? 0.03 : 0.25);
     final outline = cs.outline.withValues(alpha: isDark ? 0.65 : 0.50);
-
     return Container(
       padding: widget.padding,
       decoration: BoxDecoration(
@@ -72,3 +63,4 @@ class _HoloCardState extends State<HoloCard>
     );
   }
 }
+

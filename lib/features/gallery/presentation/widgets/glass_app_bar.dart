@@ -1,15 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
-
 import 'package:anas_space/ui/widgets/extruded_surface.dart';
-
 class GlassAppBar extends StatelessWidget {
   final String title;
   final String subtitle;
   final List<Widget>? actions;
   final Widget? leading;
-
   const GlassAppBar({
     super.key,
     required this.title,
@@ -17,20 +14,14 @@ class GlassAppBar extends StatelessWidget {
     this.actions,
     this.leading,
   });
-
   @override
   Widget build(BuildContext context) {
     final isDesktop = Platform.isWindows;
     final cs = Theme.of(context).colorScheme;
-    // Use the theme surface as the app bar base so it contrasts with
-    // scaffoldBackgroundColor. Apply a stronger warm tint in light mode
-    // to make the bar pop.
     final baseSurface = cs.surface;
     Color surfaceColor = baseSurface;
     if (Theme.of(context).brightness == Brightness.light) {
       final hsl = HSLColor.fromColor(baseSurface);
-      // Subtle warm nudge without pushing into yellow — smaller hue shift and
-      // slight saturation increase while keeping it a touch darker for contrast.
       surfaceColor = hsl
           .withHue((hsl.hue + 8) % 360)
           .withSaturation((hsl.saturation + 0.02).clamp(0.0, 1.0))
@@ -39,7 +30,6 @@ class GlassAppBar extends StatelessWidget {
     }
     final brightness = Theme.of(context).brightness;
     final double intensity = brightness == Brightness.light ? 2.0 : 1.0;
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ExtrudedSurface(
@@ -51,10 +41,7 @@ class GlassAppBar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Row(
           children: [
-            // 1. LEADING ICON
             if (leading != null) ...[leading!, const SizedBox(width: 15)],
-
-            // 2. DRAGGABLE TITLE AREA
             Expanded(
               child: GestureDetector(
                 behavior: HitTestBehavior.translucent, // Catch all touches
@@ -89,9 +76,7 @@ class GlassAppBar extends StatelessWidget {
                 ),
               ),
             ),
-
             if (actions != null) ...actions!,
-
             if (isDesktop) ...[
               const SizedBox(width: 20),
               Container(
@@ -102,15 +87,12 @@ class GlassAppBar extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-
-              // Minimize
               _WindowButton(
                 icon: Icons.remove,
                 color: cs.onSurface,
                 depth: brightness == Brightness.light ? 8 : 5,
                 onTap: () async => await windowManager.minimize(),
               ),
-              // Maximize / Restore
               _WindowButton(
                 icon: Icons.crop_square,
                 color: cs.onSurface,
@@ -136,26 +118,21 @@ class GlassAppBar extends StatelessWidget {
     );
   }
 }
-
 class _WindowButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final Color color;
   final double depth;
-
   const _WindowButton({
     required this.icon,
     required this.onTap,
     required this.color,
     this.depth = 5,
   });
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-
     final isClose = color == cs.error;
-
     return ExtrudedIconButton(
       icon: icon,
       onTap: onTap,
@@ -167,3 +144,4 @@ class _WindowButton extends StatelessWidget {
     );
   }
 }
+

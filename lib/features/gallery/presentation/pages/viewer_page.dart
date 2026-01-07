@@ -3,21 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
 import '../../domain/unified_asset.dart';
 import '../../../../../ui/theme/cyberpunk_theme.dart';
-
 class ViewerPage extends StatelessWidget {
   final UnifiedAsset asset;
-
   const ViewerPage({super.key, required this.asset});
-
   @override
   Widget build(BuildContext context) {
     final bool isDesktop = MediaQuery.of(context).size.width > 600;
-
     return Scaffold(
       backgroundColor: CyberpunkTheme.darkBg,
       body: Stack(
         children: [
-          // Holographic gradient overlay
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -26,8 +21,12 @@ class ViewerPage extends StatelessWidget {
                   radius: 1.5,
                   colors: [
                     CyberpunkTheme.darkBg,
-                    CyberpunkTheme.neonCyan.withOpacity(0.05),
-                    CyberpunkTheme.neonMagenta.withOpacity(0.05),
+                    CyberpunkTheme.neonCyan.withValues(
+                      alpha: CyberpunkTheme.neonCyan.a * 0.05,
+                    ),
+                    CyberpunkTheme.neonMagenta.withValues(
+                      alpha: CyberpunkTheme.neonMagenta.a * 0.05,
+                    ),
                     CyberpunkTheme.darkBg,
                   ],
                   stops: const [0.0, 0.3, 0.7, 1.0],
@@ -42,7 +41,6 @@ class ViewerPage extends StatelessWidget {
               child: _buildImage(),
             ),
           ),
-          // Cyberpunk close button
           Positioned(
             top: isDesktop ? 40 : 30,
             right: isDesktop ? 30 : 20,
@@ -74,7 +72,6 @@ class ViewerPage extends StatelessWidget {
               ),
             ),
           ),
-          // Info overlay (optional)
           Positioned(
             bottom: isDesktop ? 30 : 20,
             left: isDesktop ? 30 : 20,
@@ -86,18 +83,26 @@ class ViewerPage extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    CyberpunkTheme.darkBgSecondary.withOpacity(0.9),
-                    CyberpunkTheme.darkBg.withOpacity(0.9),
+                    CyberpunkTheme.darkBgSecondary.withValues(
+                      alpha: CyberpunkTheme.darkBgSecondary.a * 0.9,
+                    ),
+                    CyberpunkTheme.darkBg.withValues(
+                      alpha: CyberpunkTheme.darkBg.a * 0.9,
+                    ),
                   ],
                 ),
                 border: Border.all(
-                  color: CyberpunkTheme.neonCyan.withOpacity(0.3),
+                  color: CyberpunkTheme.neonCyan.withValues(
+                    alpha: CyberpunkTheme.neonCyan.a * 0.3,
+                  ),
                   width: 1,
                 ),
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
-                    color: CyberpunkTheme.neonCyan.withOpacity(0.1),
+                    color: CyberpunkTheme.neonCyan.withValues(
+                      alpha: CyberpunkTheme.neonCyan.a * 0.1,
+                    ),
                     blurRadius: 8,
                   ),
                 ],
@@ -129,11 +134,8 @@ class ViewerPage extends StatelessWidget {
       ),
     );
   }
-
   Widget _buildImage() {
     final bool isMobile = Platform.isAndroid || Platform.isIOS;
-
-    // 📱 Mobile Local
     if (isMobile && asset.isLocal) {
       return FutureBuilder<File?>(
         future: AssetEntity.fromId(asset.id).then((e) => e?.file),
@@ -147,15 +149,13 @@ class ViewerPage extends StatelessWidget {
         },
       );
     }
-
     if (asset.isLocal && asset.localFile != null) {
       return Image.file(asset.localFile!, fit: BoxFit.contain);
     }
-
     if (asset.remoteUrl != null) {
       return Image.network(asset.remoteUrl!, fit: BoxFit.contain);
     }
-
     return const Icon(Icons.error);
   }
 }
+

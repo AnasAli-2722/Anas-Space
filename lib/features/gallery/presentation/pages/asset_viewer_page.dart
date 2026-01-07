@@ -5,43 +5,32 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import '../../domain/unified_asset.dart';
 import '../widgets/cinematic_background.dart';
-
 class AssetViewerPage extends StatefulWidget {
   final UnifiedAsset asset;
-
   const AssetViewerPage({super.key, required this.asset});
-
   @override
   State<AssetViewerPage> createState() => _AssetViewerPageState();
 }
-
 class _AssetViewerPageState extends State<AssetViewerPage> {
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   bool _isVideo = false;
   bool _isInitialized = false;
-
   @override
   void initState() {
     super.initState();
     _checkTypeAndLoad();
   }
-
   Future<void> _checkTypeAndLoad() async {
     if (widget.asset.deviceAsset != null) {
       _isVideo = widget.asset.deviceAsset!.type == AssetType.video;
     }
-
     if (!_isVideo) return;
-
     try {
       final file = await widget.asset.deviceAsset?.file;
       if (file == null) return;
-
       _videoController = VideoPlayerController.file(file);
-
       await _videoController!.initialize();
-
       _chewieController = ChewieController(
         videoPlayerController: _videoController!,
         autoPlay: true,
@@ -56,29 +45,24 @@ class _AssetViewerPageState extends State<AssetViewerPage> {
           );
         },
       );
-
       if (!mounted) return;
       setState(() => _isInitialized = true);
     } catch (e, stackTrace) {
       debugPrintStack(label: "Error loading video: $e", stackTrace: stackTrace);
     }
   }
-
   @override
   void dispose() {
     _videoController?.dispose();
     _chewieController?.dispose();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final bool isDesktop = MediaQuery.of(context).size.width > 600;
-
     return Scaffold(
       appBar: AppBar(
-        elevation: 0,
+        scrolledUnderElevation: 0,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Divider(
@@ -97,7 +81,6 @@ class _AssetViewerPageState extends State<AssetViewerPage> {
       ),
     );
   }
-
   Widget _buildVideoPlayer() {
     if (!_isInitialized || _chewieController == null) {
       return const CircularProgressIndicator(strokeWidth: 2);
@@ -107,7 +90,6 @@ class _AssetViewerPageState extends State<AssetViewerPage> {
       child: Chewie(controller: _chewieController!),
     );
   }
-
   Widget _buildFullImage() {
     if (widget.asset.deviceAsset != null) {
       return AssetEntityImage(
@@ -116,15 +98,13 @@ class _AssetViewerPageState extends State<AssetViewerPage> {
         fit: BoxFit.contain,
       );
     }
-
     if (widget.asset.localFile != null) {
       return Image.file(widget.asset.localFile!, fit: BoxFit.contain);
     }
-
     if (widget.asset.remoteUrl != null) {
       return Image.network(widget.asset.remoteUrl!, fit: BoxFit.contain);
     }
-
     return const Icon(Icons.error, color: Colors.white);
   }
 }
+

@@ -14,49 +14,35 @@ import '../../presentation/widgets/glass_app_bar.dart';
 import '../constants/ui_constants.dart';
 import '../../../../core/services/secure_storage_service.dart';
 import '../../../../ui/widgets/stone_theme_switch.dart';
-
 import '../../../sync/presentation/pages/sync_page.dart';
-
 import 'albums_page.dart';
 import 'trash_page.dart';
-
 class DashboardPage extends StatefulWidget {
   final GalleryService galleryService;
-
   const DashboardPage({super.key, required this.galleryService});
-
   @override
   State<DashboardPage> createState() => _DashboardPageState();
 }
-
 class _DashboardPageState extends State<DashboardPage> {
   late final GalleryService _galleryService;
   final SecureStorageService _secureStorage = SecureStorageService();
-
   List<UnifiedAsset> _gallery = [];
   Map<String, List<UnifiedAsset>> _groupedGallery = {};
-
   bool _isLoading = true;
   String _status = "Ready";
-
   bool _pinIsSet = false;
   String _lockerPath = "";
   bool _isLockerMode = false;
-
   final Set<String> _selectedIds = {};
   bool _isSelectionMode = false;
   final bool _isMobile = Platform.isAndroid || Platform.isIOS;
-
   bool? _androidMoveToTrashSupported;
-
   Future<bool> _tryAndroidMoveToTrash(AssetEntity asset) async {
     if (!Platform.isAndroid) return false;
     if (_androidMoveToTrashSupported == false) return false;
-
     try {
       final dynamic editor = PhotoManager.editor;
       final dynamic result = await (editor as dynamic).moveToTrash([asset]);
-
       final ok = result is bool ? result : result != null;
       if (ok) _androidMoveToTrashSupported = true;
       return ok;
@@ -71,25 +57,20 @@ class _DashboardPageState extends State<DashboardPage> {
       return false;
     }
   }
-
   @override
   void initState() {
     super.initState();
     _galleryService = widget.galleryService;
     _bootSystem();
   }
-
   Future<void> _bootSystem() async {
     _pinIsSet = await _secureStorage.hasPinSet();
-
     final docDir = await getApplicationDocumentsDirectory();
     final lockerDir = Directory(
       '${docDir.path}${Platform.pathSeparator}.anas_locker',
     );
     if (!await lockerDir.exists()) await lockerDir.create();
     _lockerPath = lockerDir.path;
-
-    // Initialize trash on Windows
     if (Platform.isWindows) {
       final trashDir = Directory(
         '${docDir.path}${Platform.pathSeparator}.anas_trash',
@@ -97,13 +78,10 @@ class _DashboardPageState extends State<DashboardPage> {
       _galleryService.initTrash(trashDir.path);
       await _galleryService.trashService?.init();
     }
-
     await _refreshGallery();
   }
-
   Future<void> _refreshGallery() async {
     if (!mounted) return;
-
     List<UnifiedAsset> newAssets = [];
     await Future.microtask(() async {
       if (_isLockerMode) {
@@ -116,16 +94,12 @@ class _DashboardPageState extends State<DashboardPage> {
         }
       }
     });
-
     _updateMasterGallery(local: newAssets);
   }
-
   void _updateMasterGallery({List<UnifiedAsset>? local}) {
     if (local != null) _gallery = local;
-
     _gallery.sort((a, b) => b.dateModified.compareTo(a.dateModified));
     _groupedGallery = _groupAssets(_gallery);
-
     if (mounted) {
       setState(() {
         _isLoading = false;
@@ -135,21 +109,16 @@ class _DashboardPageState extends State<DashboardPage> {
       });
     }
   }
-
-  // Cache formatters once.
   static final DateFormat _monthFmt = DateFormat('MMMM');
   static final DateFormat _yearFmt = DateFormat('y');
-
   Map<String, List<UnifiedAsset>> _groupAssets(List<UnifiedAsset> assets) {
     final groups = <String, List<UnifiedAsset>>{};
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
-
     for (final asset in assets) {
       final date = asset.dateModified;
       final assetDate = DateTime(date.year, date.month, date.day);
-
       late final String header;
       if (assetDate == today) {
         header = "Today";
@@ -160,12 +129,10 @@ class _DashboardPageState extends State<DashboardPage> {
       } else {
         header = _yearFmt.format(date);
       }
-
       (groups[header] ??= <UnifiedAsset>[]).add(asset);
     }
     return groups;
   }
-
   void _toggleSelection(String id) {
     setState(() {
       if (_selectedIds.contains(id)) {
@@ -176,7 +143,6 @@ class _DashboardPageState extends State<DashboardPage> {
       _isSelectionMode = _selectedIds.isNotEmpty;
     });
   }
-
   Future<void> _handleLockerAccess() async {
     if (!_pinIsSet) {
       await _showPinDialog(isSetup: true);
@@ -184,21 +150,13 @@ class _DashboardPageState extends State<DashboardPage> {
       await _showPinDialog(isSetup: false);
     }
   }
-
   Future<void> _showPinDialog({required bool isSetup}) async {
     String input = "";
     await showDialog(
       context: context,
       barrierColor: CyberpunkTheme.darkBg.withValues(alpha: 0.8),
       builder: (ctx) => AlertDialog(
-        backgroundColor: CyberpunkTheme.darkBgSecondary,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: CyberpunkTheme.neonMagenta.withValues(alpha: 0.5),
-            width: 2,
-          ),
-        ),
+        surfaceTintColor: CyberpunkTheme.darkBgSecondary,
         title: ShaderMask(
           shaderCallback: (bounds) {
             return LinearGradient(
@@ -271,16 +229,13 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
     );
   }
-
   void _processPin(String input, bool isSetup) async {
-    // Validate PIN length (minimum 4 digits, maximum 10)
     if (input.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("PIN cannot be empty")));
       return;
     }
-
     if (input.length < UIConstants.pinMinLength) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -291,7 +246,6 @@ class _DashboardPageState extends State<DashboardPage> {
       );
       return;
     }
-
     if (input.length > UIConstants.pinMaxLength) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -302,16 +256,17 @@ class _DashboardPageState extends State<DashboardPage> {
       );
       return;
     }
-
     if (isSetup) {
       final success = await _secureStorage.setPin(input);
       if (success) {
         setState(() => _pinIsSet = true);
+        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text("PIN set successfully")));
         _toggleLockerMode();
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Error setting PIN. Try again.")),
         );
@@ -321,13 +276,13 @@ class _DashboardPageState extends State<DashboardPage> {
       if (isValid) {
         _toggleLockerMode();
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text("Incorrect PIN")));
       }
     }
   }
-
   void _toggleLockerMode() {
     setState(() {
       _isLockerMode = !_isLockerMode;
@@ -337,13 +292,11 @@ class _DashboardPageState extends State<DashboardPage> {
     setState(() => _isLoading = true);
     _refreshGallery();
   }
-
   Future<void> _deleteSelected() async {
     final count = _selectedIds.length;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: UIConstants.dialogSecondaryBackgroundColor,
         title: const Text("Delete?", style: TextStyle(color: Colors.white)),
         content: Text(
           Platform.isWindows || Platform.isAndroid
@@ -363,7 +316,6 @@ class _DashboardPageState extends State<DashboardPage> {
         ],
       ),
     );
-
     if (confirm == true) {
       final Map<String, UnifiedAsset> assetsById = {
         for (final a in _gallery) a.id: a,
@@ -372,12 +324,10 @@ class _DashboardPageState extends State<DashboardPage> {
       for (final id in _selectedIds.toList()) {
         try {
           final asset = assetsById[id];
-
           final localPath = asset?.localFile?.path;
           if (localPath != null) {
             final f = File(localPath);
             if (!await f.exists()) continue;
-
             if (Platform.isWindows && _galleryService.trashService != null) {
               final trashedPath = await _galleryService.trashService!
                   .moveToTrash(localPath);
@@ -388,18 +338,15 @@ class _DashboardPageState extends State<DashboardPage> {
             }
             continue;
           }
-
           final deviceAsset = asset?.deviceAsset;
           if (deviceAsset != null) {
             final permission = await PhotoManager.requestPermissionExtend();
             if (!permission.isAuth) continue;
-
             final movedToTrash = await _tryAndroidMoveToTrash(deviceAsset);
             if (movedToTrash) {
               deletedCount++;
               continue;
             }
-
             try {
               final deletedIds = await PhotoManager.editor.deleteWithIds([
                 deviceAsset.id,
@@ -418,8 +365,6 @@ class _DashboardPageState extends State<DashboardPage> {
             }
             continue;
           }
-
-          // Fallback: try treating id as a path
           final fallback = File(id);
           if (await fallback.exists()) {
             if (Platform.isWindows && _galleryService.trashService != null) {
@@ -440,7 +385,6 @@ class _DashboardPageState extends State<DashboardPage> {
       }
       _selectedIds.clear();
       _isSelectionMode = false;
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -452,17 +396,14 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         );
       }
-
       await _refreshGallery();
     }
   }
-
   Future<void> _moveSelectedFiles() async {
     if (!_isLockerMode && !_pinIsSet) {
       await _showPinDialog(isSetup: true);
       if (!_pinIsSet) return;
     }
-
     final isHiding = !_isLockerMode;
     String dest = isHiding
         ? _lockerPath
@@ -470,7 +411,6 @@ class _DashboardPageState extends State<DashboardPage> {
               ? ""
               : '${Platform.environment['USERPROFILE']}${Platform.pathSeparator}Downloads');
     if (!isHiding && _isMobile) return;
-
     int count = 0;
     for (String id in _selectedIds) {
       if (!_isMobile && File(id).existsSync()) {
@@ -492,7 +432,6 @@ class _DashboardPageState extends State<DashboardPage> {
         }
       }
     }
-
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -508,7 +447,6 @@ class _DashboardPageState extends State<DashboardPage> {
     _isSelectionMode = false;
     await _refreshGallery();
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -588,7 +526,6 @@ class _DashboardPageState extends State<DashboardPage> {
                           ),
                         ],
                 ),
-
                 Expanded(
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator())
@@ -665,7 +602,6 @@ class _DashboardPageState extends State<DashboardPage> {
                 ),
               ],
             ),
-
             if (_isSelectionMode)
               Positioned(
                 bottom: UIConstants.bottomActionBarBottomMargin,
@@ -709,14 +645,11 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 }
-
 class _NavBarIcon extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final Color? color;
-
   const _NavBarIcon({required this.icon, required this.onTap, this.color});
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -734,7 +667,6 @@ class _NavBarIcon extends StatelessWidget {
     );
   }
 }
-
 class GrainPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -746,7 +678,7 @@ class GrainPainter extends CustomPainter {
       canvas.drawCircle(Offset(dx, dy), 1, paint);
     }
   }
-
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+

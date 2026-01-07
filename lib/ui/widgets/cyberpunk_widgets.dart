@@ -1,26 +1,21 @@
 import 'package:flutter/material.dart';
 import '../helpers/shadow_helpers.dart';
-
 class GlitchText extends StatefulWidget {
   final String text;
   final TextStyle? style;
   final double glitchIntensity;
-
   const GlitchText({
     super.key,
     required this.text,
     this.style,
     this.glitchIntensity = 1.0,
   });
-
   @override
   State<GlitchText> createState() => _GlitchTextState();
 }
-
 class _GlitchTextState extends State<GlitchText>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-
   @override
   void initState() {
     super.initState();
@@ -29,13 +24,11 @@ class _GlitchTextState extends State<GlitchText>
       duration: const Duration(milliseconds: 100),
     )..repeat();
   }
-
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
@@ -46,14 +39,12 @@ class _GlitchTextState extends State<GlitchText>
     );
   }
 }
-
 class NeonBorder extends StatelessWidget {
   final Widget child;
   final Color color;
   final double borderWidth;
   final double borderRadius;
   final bool animate;
-
   const NeonBorder({
     super.key,
     required this.child,
@@ -62,7 +53,6 @@ class NeonBorder extends StatelessWidget {
     this.borderRadius = 12.0,
     this.animate = false,
   });
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -71,12 +61,12 @@ class NeonBorder extends StatelessWidget {
         border: Border.all(color: color, width: borderWidth),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.5),
+            color: color.withValues(alpha: color.a * 0.5),
             blurRadius: 10.0,
             spreadRadius: 2.0,
           ),
           BoxShadow(
-            color: color.withOpacity(0.3),
+            color: color.withValues(alpha: color.a * 0.3),
             blurRadius: 20.0,
             spreadRadius: 4.0,
           ),
@@ -89,13 +79,11 @@ class NeonBorder extends StatelessWidget {
     );
   }
 }
-
 class CyberpunkButton extends StatefulWidget {
   final VoidCallback onPressed;
   final Widget child;
   final Color color;
   final double borderRadius;
-
   const CyberpunkButton({
     super.key,
     required this.onPressed,
@@ -103,14 +91,11 @@ class CyberpunkButton extends StatefulWidget {
     this.color = const Color(0xFF00F5FF),
     this.borderRadius = 8.0,
   });
-
   @override
   State<CyberpunkButton> createState() => _CyberpunkButtonState();
 }
-
 class _CyberpunkButtonState extends State<CyberpunkButton> {
   bool _isPressed = false;
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -127,8 +112,12 @@ class _CyberpunkButtonState extends State<CyberpunkButton> {
           border: Border.all(color: widget.color, width: 2.0),
           gradient: LinearGradient(
             colors: [
-              widget.color.withOpacity(_isPressed ? 0.3 : 0.1),
-              widget.color.withOpacity(_isPressed ? 0.2 : 0.05),
+              widget.color.withValues(
+                alpha: widget.color.a * (_isPressed ? 0.3 : 0.1),
+              ),
+              widget.color.withValues(
+                alpha: widget.color.a * (_isPressed ? 0.2 : 0.05),
+              ),
             ],
           ),
           boxShadow: _isPressed
@@ -154,3 +143,4 @@ class _CyberpunkButtonState extends State<CyberpunkButton> {
     );
   }
 }
+

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
-
 import '../../data/gallery_service.dart';
 import '../../domain/album_model.dart';
 import '../../domain/unified_asset.dart';
@@ -9,25 +8,20 @@ import '../widgets/video_thumbnail_view.dart';
 import '../album_content_page.dart';
 import '../../../../ui/widgets/stone_theme_switch.dart';
 import '../../../../ui/helpers/shadow_helpers.dart';
-
 class AlbumsPage extends StatefulWidget {
   final GalleryService galleryService;
   const AlbumsPage({super.key, required this.galleryService});
-
   @override
   State<AlbumsPage> createState() => _AlbumsPageState();
 }
-
 class _AlbumsPageState extends State<AlbumsPage> {
   List<UnifiedAlbum> _albums = [];
   bool _isLoading = true;
-
   @override
   void initState() {
     super.initState();
     _loadAlbums();
   }
-
   Future<void> _loadAlbums() async {
     final albums = await widget.galleryService.fetchAlbums();
     if (mounted) {
@@ -37,7 +31,6 @@ class _AlbumsPageState extends State<AlbumsPage> {
       });
     }
   }
-
   bool _isVideo(UnifiedAsset? asset) {
     if (asset == null) return false;
     if (asset.deviceAsset != null) {
@@ -53,15 +46,12 @@ class _AlbumsPageState extends State<AlbumsPage> {
     }
     return false;
   }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final isDarkTheme = Theme.of(context).brightness == Brightness.dark;
     final bool isDesktop = MediaQuery.of(context).size.width > 600;
     final double screenWidth = MediaQuery.of(context).size.width;
-
-    // Responsive cross axis count
     int crossAxisCount;
     if (screenWidth > 1200) {
       crossAxisCount = 4;
@@ -72,10 +62,8 @@ class _AlbumsPageState extends State<AlbumsPage> {
     } else {
       crossAxisCount = 2;
     }
-
     final double spacing = isDesktop ? 16 : 12;
     final double padding = isDesktop ? 16 : 12;
-
     return Scaffold(
       appBar: AppBar(
         actions: const [StoneThemeSwitch()],
@@ -105,10 +93,8 @@ class _AlbumsPageState extends State<AlbumsPage> {
               itemCount: _albums.length,
               itemBuilder: (context, index) {
                 final album = _albums[index];
-
                 final isVideoCover = _isVideo(album.coverAsset);
                 final hasCover = album.coverAsset != null;
-
                 return GestureDetector(
                   onTap: () {
                     Navigator.push(
@@ -202,7 +188,6 @@ class _AlbumsPageState extends State<AlbumsPage> {
                                         fit: BoxFit.cover,
                                       ),
                                   ],
-                                  // Subtle stone overlay (only on this large surface)
                                   Container(
                                     decoration: BoxDecoration(
                                       gradient: LinearGradient(
@@ -282,7 +267,6 @@ class _AlbumsPageState extends State<AlbumsPage> {
             ),
     );
   }
-
   Widget _buildPlaceholderIcon(
     bool hasCover,
     bool isVideoCover,
@@ -290,7 +274,6 @@ class _AlbumsPageState extends State<AlbumsPage> {
   ) {
     final cs = Theme.of(context).colorScheme;
     final isDarkTheme = Theme.of(context).brightness == Brightness.dark;
-
     if (!hasCover) {
       return Container(
         padding: EdgeInsets.all(isDesktop ? 16 : 12),
@@ -314,10 +297,10 @@ class _AlbumsPageState extends State<AlbumsPage> {
         ),
       );
     }
-
     if (isVideoCover) {
       return const SizedBox();
     }
     return const SizedBox();
   }
 }
+

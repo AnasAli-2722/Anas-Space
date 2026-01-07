@@ -1,14 +1,11 @@
 import '../../../gallery/domain/unified_asset.dart';
-
 class SyncState {
   final bool isServerRunning;
   final String myIp;
   final String pairingToken;
   final List<String> logs;
   final List<UnifiedAsset> remoteAssets;
-
   final Map<String, String> connectedDevices;
-
   SyncState({
     this.isServerRunning = false,
     this.myIp = "Offline",
@@ -17,7 +14,6 @@ class SyncState {
     this.remoteAssets = const [],
     this.connectedDevices = const {},
   });
-
   SyncState copyWith({
     bool? isServerRunning,
     String? myIp,
@@ -36,3 +32,4 @@ class SyncState {
     );
   }
 }
+

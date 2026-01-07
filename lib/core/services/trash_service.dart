@@ -1,46 +1,27 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-
-/// Manages soft delete and restore operations for Windows
-/// Files are moved to a `.trash` directory instead of being permanently deleted
 class TrashService {
   final String _trashPath;
-
   TrashService({required String trashPath}) : _trashPath = trashPath;
-
-  /// Initialize trash directory
   Future<void> init() async {
     final dir = Directory(_trashPath);
     if (!await dir.exists()) {
       await dir.create(recursive: true);
     }
   }
-
-  /// Get the trash directory
   Directory get trashDirectory => Directory(_trashPath);
-
-  /// Move file to trash (soft delete)
-  /// Returns the trash path if successful, null otherwise
   Future<String?> moveToTrash(String filePath) async {
     try {
       final file = File(filePath);
       if (!await file.exists()) return null;
-
       final fileName = filePath.split(Platform.pathSeparator).last;
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final trashFileName = '${timestamp}_$fileName';
       final trashFilePath =
           '$_trashPath${Platform.pathSeparator}$trashFileName';
-
-      // Create a metadata file to track original path
       final metadataPath = '$trashFilePath.meta';
       final metadataFile = File(metadataPath);
       await metadataFile.writeAsString(filePath);
-
-      // Move file to trash.
-      // On Windows, rename can fail for some locations (cloud drives, cross-device)
-      // or behave unexpectedly depending on underlying provider. We guarantee the
-      // original path no longer exists by falling back to copy+delete.
       try {
         await file.rename(trashFilePath);
       } on FileSystemException {
@@ -49,18 +30,14 @@ class TrashService {
           await file.delete();
         }
       }
-
-      // Extra safety: if the original still exists for any reason, delete it.
       final originalStillExists = await File(filePath).exists();
       if (originalStillExists) {
         try {
           await File(filePath).delete();
         } catch (_) {
-          // If we can't delete, keep the trash copy but report failure.
           return null;
         }
       }
-
       debugPrint('Moved to trash: $filePath -> $trashFilePath');
       return trashFilePath;
     } catch (e, stackTrace) {
@@ -71,25 +48,19 @@ class TrashService {
       return null;
     }
   }
-
-  /// Get all trashed files with their original paths
   Future<List<TrashItem>> listTrash() async {
     final items = <TrashItem>[];
-
     try {
       final trashDir = Directory(_trashPath);
       if (!await trashDir.exists()) return items;
-
       await for (final entity in trashDir.list()) {
         if (entity is File && !entity.path.endsWith('.meta')) {
           final metadataPath = '${entity.path}.meta';
           final metadataFile = File(metadataPath);
-
           String originalPath = entity.path;
           if (await metadataFile.exists()) {
             originalPath = await metadataFile.readAsString();
           }
-
           items.add(
             TrashItem(
               trashedPath: entity.path,
@@ -109,37 +80,26 @@ class TrashService {
           );
         }
       }
-
-      // Sort by date, most recent first
       items.sort((a, b) => b.trashedAt.compareTo(a.trashedAt));
     } catch (e, stackTrace) {
       debugPrintStack(label: 'Error listing trash: $e', stackTrace: stackTrace);
     }
-
     return items;
   }
-
-  /// Restore file from trash to its original location
   Future<bool> restore(String trashedPath) async {
     try {
       final trashedFile = File(trashedPath);
       if (!await trashedFile.exists()) return false;
-
       final metadataPath = '$trashedPath.meta';
       final metadataFile = File(metadataPath);
-
       String originalPath = trashedPath;
       if (await metadataFile.exists()) {
         originalPath = await metadataFile.readAsString();
       }
-
-      // Ensure destination directory exists
       final destDir = File(originalPath).parent;
       if (!await destDir.exists()) {
         await destDir.create(recursive: true);
       }
-
-      // Handle name collision
       var finalPath = originalPath;
       int counter = 1;
       while (await File(finalPath).exists()) {
@@ -153,15 +113,10 @@ class TrashService {
         }
         counter++;
       }
-
-      // Restore file
       await trashedFile.rename(finalPath);
-
-      // Clean up metadata
       if (await metadataFile.exists()) {
         await metadataFile.delete();
       }
-
       debugPrint('Restored from trash: $trashedPath -> $finalPath');
       return true;
     } catch (e, stackTrace) {
@@ -172,22 +127,17 @@ class TrashService {
       return false;
     }
   }
-
-  /// Permanently delete file from trash
   Future<bool> permanentlyDelete(String trashedPath) async {
     try {
       final file = File(trashedPath);
       if (await file.exists()) {
         await file.delete();
       }
-
-      // Clean up metadata
       final metadataPath = '$trashedPath.meta';
       final metadataFile = File(metadataPath);
       if (await metadataFile.exists()) {
         await metadataFile.delete();
       }
-
       debugPrint('Permanently deleted: $trashedPath');
       return true;
     } catch (e, stackTrace) {
@@ -198,14 +148,11 @@ class TrashService {
       return false;
     }
   }
-
-  /// Empty the trash (permanent delete all)
   Future<int> emptyTrash() async {
     int deletedCount = 0;
     try {
       final trashDir = Directory(_trashPath);
       if (!await trashDir.exists()) return 0;
-
       await for (final entity in trashDir.list()) {
         try {
           if (entity is File) {
@@ -213,10 +160,8 @@ class TrashService {
             deletedCount++;
           }
         } catch (_) {
-          // Skip individual file errors
         }
       }
-
       debugPrint('Emptied trash: deleted $deletedCount files');
     } catch (e, stackTrace) {
       debugPrintStack(
@@ -224,18 +169,13 @@ class TrashService {
         stackTrace: stackTrace,
       );
     }
-
     return deletedCount;
   }
-
-  /// Get total trash size in bytes
   Future<int> getTrashSize() async {
     int totalSize = 0;
-
     try {
       final trashDir = Directory(_trashPath);
       if (!await trashDir.exists()) return 0;
-
       await for (final entity in trashDir.list()) {
         if (entity is File && !entity.path.endsWith('.meta')) {
           totalSize += await entity.length();
@@ -244,26 +184,21 @@ class TrashService {
     } catch (e) {
       debugPrint('Error calculating trash size: $e');
     }
-
     return totalSize;
   }
 }
-
 class TrashItem {
   final String trashedPath;
   final String originalPath;
   final DateTime trashedAt;
   final int fileSize;
-
   TrashItem({
     required this.trashedPath,
     required this.originalPath,
     required this.trashedAt,
     required this.fileSize,
   });
-
   String get fileName => originalPath.split(Platform.pathSeparator).last;
-
   String get fileSizeDisplay {
     if (fileSize < 1024) {
       return '$fileSize B';
@@ -277,3 +212,4 @@ class TrashItem {
     return '${(fileSize / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 }
+

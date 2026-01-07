@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:window_manager/window_manager.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-
 import 'ui/pages/splash_screen.dart';
 import 'core/theme/theme_cubit.dart';
 import 'features/gallery/data/gallery_service.dart';
@@ -15,12 +14,9 @@ import 'ui/widgets/theme_ripple_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   bool isDesktop = !kIsWeb && Platform.isWindows;
-
   if (isDesktop) {
     await windowManager.ensureInitialized();
-
     WindowOptions windowOptions = const WindowOptions(
       size: Size(1280, 720),
       minimumSize: Size(400, 600),
@@ -29,37 +25,29 @@ void main() async {
       skipTaskbar: false,
       titleBarStyle: TitleBarStyle.hidden,
     );
-
     windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();
       await windowManager.focus();
     });
-
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
-
-  // Keep desktop fast, but avoid OOM on Android devices.
   PaintingBinding.instance.imageCache.maximumSizeBytes = isDesktop
       ? 500 * 1024 * 1024
       : 150 * 1024 * 1024;
-
   final galleryService = GalleryService();
   final syncRepo = SyncRepositoryImpl(galleryService: galleryService);
-
   runApp(AnasSpaceApp(galleryService: galleryService, syncRepo: syncRepo));
 }
 
 class AnasSpaceApp extends StatelessWidget {
   final GalleryService galleryService;
   final SyncRepositoryImpl syncRepo;
-
   const AnasSpaceApp({
     super.key,
     required this.galleryService,
     required this.syncRepo,
   });
-
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(

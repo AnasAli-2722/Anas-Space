@@ -11,21 +11,16 @@ import 'package:flutter/foundation.dart';
 import '../../features/gallery/domain/unified_asset.dart';
 
 class InfinityBridge {
-  //---------*Variables*---------
   HttpServer? _server;
   final bool isMobile = Platform.isAndroid || Platform.isIOS;
   String? _hostedIp;
   final String pairingToken;
-
   Map<String, String> _allowedDesktopFiles = {};
   Set<String> _allowedMobileIds = {};
-
-  //---------*Callbacks*---------
   final Function(String log) onLog;
   final Function(String deviceName, String ip) onConnection;
   final Function(List<UnifiedAsset> remoteAssets) onNewAssetsReceived;
   final List<UnifiedAsset> Function() getLocalAssets;
-
   InfinityBridge({
     required this.pairingToken,
     required this.onLog,
@@ -33,8 +28,6 @@ class InfinityBridge {
     required this.onNewAssetsReceived,
     required this.getLocalAssets,
   });
-
-  //---------*Server Management*---------
   void stop() {
     if (_server != null) {
       _server!.close(force: true);
@@ -46,17 +39,12 @@ class InfinityBridge {
   Future<String> start() async {
     String myIp = await _getUiSafeIp();
     _hostedIp = myIp;
-
     try {
       final app = Router();
-
-      // Define API Routes
       _configureRoutes(app);
-
       final handler = const Pipeline()
           .addMiddleware(logRequests())
           .addHandler(app.call);
-
       _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, 4545);
       return myIp;
     } catch (e) {
@@ -65,46 +53,34 @@ class InfinityBridge {
     }
   }
 
-  //---------*Route Logic*---------
   void _configureRoutes(Router app) {
-    // Serve the list of local assets (Manifest)
     app.get('/manifest', (Request req) {
       if (!_isAuthorized(req)) {
         return Response(401, body: 'Unauthorized');
       }
       final assets = getLocalAssets();
-
       _rebuildAllowLists(assets);
-
       final manifest = assets.map((e) {
-        // Encode file paths for desktop security
         String safeId = e.id;
         if (!isMobile) safeId = _generateSafeId(e.id);
-
         return {
           'id': safeId,
           'date': e.dateModified.millisecondsSinceEpoch,
           'type': isMobile ? 'mobile_asset' : 'file_path',
         };
       }).toList();
-
       return Response.ok(
         jsonEncode(manifest),
         headers: {'content-type': 'application/json'},
       );
     });
-
-    // Serve specific media files
     app.get('/media/<fileId>', (Request request, String fileId) async {
       if (!_isAuthorized(request)) {
         return Response(401, body: 'Unauthorized');
       }
-
       File? fileToServe;
-
       if (isMobile) {
         if (!_allowedMobileIds.contains(fileId)) {
-          // If allow-list isn't built yet, build it on demand.
           _rebuildAllowLists(getLocalAssets());
           if (!_allowedMobileIds.contains(fileId)) {
             return Response.forbidden('Forbidden');
@@ -113,7 +89,6 @@ class InfinityBridge {
         final asset = await AssetEntity.fromId(fileId);
         fileToServe = await asset?.file;
       } else {
-        // Only serve files that were advertised in /manifest.
         if (_allowedDesktopFiles.isEmpty) {
           _rebuildAllowLists(getLocalAssets());
         }
@@ -123,7 +98,6 @@ class InfinityBridge {
         }
         fileToServe = File(systemPath);
       }
-
       if (fileToServe != null && await fileToServe.exists()) {
         return Response.ok(
           fileToServe.openRead(),
@@ -135,68 +109,49 @@ class InfinityBridge {
       }
       return Response.notFound('File not found');
     });
-
-    // Handle connection requests from other devices
     app.post('/handshake', (Request request) async {
       if (!_isAuthorized(request)) {
         return Response(401, body: '{"status": "Unauthorized"}');
       }
       final payload = await request.readAsString();
       final data = jsonDecode(payload);
-
       String remoteIp = data['ip'];
       String deviceName = data['name'];
-
-      // Prevent connecting to self
       if (remoteIp == _hostedIp) {
         return Response.ok('{"status": "Ignored Self"}');
       }
-
       onLog("Handshake received from $deviceName");
       onConnection(deviceName, remoteIp);
-
-      // Establish bidirectional connection
       connectToDevice(remoteIp, pairingToken: pairingToken, silent: true);
-
       return Response.ok('{"status": "Welcome"}');
     });
   }
 
-  //---------*Client Connection Logic*---------
   Future<void> connectToDevice(
     String ip, {
     required String pairingToken,
     bool silent = false,
     bool sendHandshake = false,
   }) async {
-    // Validate IP format
     if (!_isValidIp(ip)) {
       if (!silent) onLog("Invalid IP address format: $ip");
       return;
     }
-
-    // Sanitize IP address (remove ports if present)
     String cleanIp = ip.contains(':') ? ip.split(':')[0] : ip;
-
-    // Prevent loopback connections
     if (cleanIp == _hostedIp ||
         cleanIp == '127.0.0.1' ||
         cleanIp == 'localhost') {
       if (!silent) onLog("Skipped connection to self ($cleanIp)");
       return;
     }
-
     if (!silent) onLog("Connecting to $cleanIp...");
-
     try {
       final url = Uri.parse(
         "http://$cleanIp:4545/manifest?t=${Uri.encodeComponent(pairingToken)}",
       );
       final response = await http.get(url).timeout(const Duration(seconds: 3));
-
       if (response.statusCode == 200) {
         if (sendHandshake) _sendHandshakeTo(cleanIp);
-
         final List<dynamic> data = jsonDecode(response.body);
         List<UnifiedAsset> newRemoteAssets = data.map((item) {
           final id = item['id'];
@@ -208,7 +163,6 @@ class InfinityBridge {
             dateModified: DateTime.fromMillisecondsSinceEpoch(item['date']),
           );
         }).toList();
-
         onNewAssetsReceived(newRemoteAssets);
         if (!silent) onLog("Connected! Found ${newRemoteAssets.length} items.");
       }
@@ -224,7 +178,6 @@ class InfinityBridge {
       "port": 4545,
       "name": Platform.localHostname,
     });
-
     try {
       await http.post(
         Uri.parse(
@@ -233,13 +186,11 @@ class InfinityBridge {
         body: body,
       );
     } catch (e) {
-      // Handshake failures are expected if the target is not ready
+      debugPrint('Handshake error: $e');
     }
   }
 
-  //---------*Helpers*---------
   Future<String> _getUiSafeIp() async {
-    // Desktop: Filter out virtual interfaces (VMs, WSL, etc.)
     if (!kIsWeb && Platform.isWindows) {
       try {
         final interfaces = await NetworkInterface.list(
@@ -259,16 +210,14 @@ class InfinityBridge {
           }
         }
       } catch (e) {
-        // Fallback to default behavior on error
+        debugPrint('Network interface error: $e');
       }
     } else {
-      // Mobile: Use NetworkInfo plugin
       return await NetworkInfo().getWifiIP() ?? "127.0.0.1";
     }
     return "127.0.0.1";
   }
 
-  // Encodes file paths to URL-safe strings
   String _generateSafeId(String path) {
     List<int> bytes = utf8.encode(path);
     return base64Url.encode(bytes);
@@ -309,18 +258,12 @@ class InfinityBridge {
     return 'application/octet-stream';
   }
 
-  // Validates IPv4 address format
   bool _isValidIp(String ip) {
-    // Remove port if present
     String cleanIp = ip.contains(':') ? ip.split(':')[0] : ip;
-
     final ipv4Regex = RegExp(r'^(\d{1,3}\.){3}\d{1,3}$');
-
     if (!ipv4Regex.hasMatch(cleanIp)) {
       return false;
     }
-
-    // Validate each octet is 0-255
     final octets = cleanIp.split('.');
     for (final octet in octets) {
       final num = int.tryParse(octet);
@@ -328,7 +271,6 @@ class InfinityBridge {
         return false;
       }
     }
-
     return true;
   }
 }

@@ -1,16 +1,12 @@
 import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
 import '../../core/theme/theme_cubit.dart';
 import '../theme/stone_theme.dart';
 
 class ThemeRippleOverlay extends StatefulWidget {
   final Widget child;
-
   const ThemeRippleOverlay({super.key, required this.child});
-
   @override
   State<ThemeRippleOverlay> createState() => _ThemeRippleOverlayState();
 }
@@ -18,9 +14,7 @@ class ThemeRippleOverlay extends StatefulWidget {
 class _ThemeRippleOverlayState extends State<ThemeRippleOverlay>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-
   ThemeRippleRequest? _active;
-
   @override
   void initState() {
     super.initState();
@@ -41,7 +35,6 @@ class _ThemeRippleOverlayState extends State<ThemeRippleOverlay>
     _controller
       ..stop()
       ..value = 0;
-
     _controller.forward().whenComplete(() {
       if (!mounted) return;
       final active = _active;
@@ -89,35 +82,55 @@ class _ThemeRipplePainter extends CustomPainter {
   final Listenable repaint;
   final Offset origin;
   final Color fillColor;
-
   _ThemeRipplePainter({
     required this.repaint,
     required this.origin,
     required this.fillColor,
   }) : super(repaint: repaint);
-
   @override
   void paint(Canvas canvas, Size size) {
     final t = (repaint as Animation<double>).value;
-
     final maxRadius = _maxDistanceToCorners(origin, size);
     final radius = uiEaseOutCubic(t) * maxRadius;
-
     final rect = Offset.zero & size;
 
-    // Feathered edge (matte, no glow): radial gradient with a soft falloff.
-    final gradient = RadialGradient(
-      center: Alignment(
-        (origin.dx / size.width) * 2 - 1,
-        (origin.dy / size.height) * 2 - 1,
-      ),
-      radius: (radius / maxRadius).clamp(0.0, 1.0),
-      colors: [fillColor, fillColor, fillColor.withValues(alpha: 0.0)],
-      stops: const [0.0, 0.98, 1.0],
-    );
+    final alignmentX = (origin.dx / size.width) * 2 - 1;
+    final alignmentY = (origin.dy / size.height) * 2 - 1;
+    final center = Alignment(alignmentX, alignmentY);
+    final normalizedRadius = (radius / maxRadius).clamp(0.0, 1.0);
 
+    final gradient = RadialGradient(
+      center: center,
+      radius: normalizedRadius,
+      colors: [fillColor, fillColor, fillColor.withValues(alpha: 0.0)],
+      stops: const [0.0, 0.96, 1.0],
+    );
     final paint = Paint()..shader = gradient.createShader(rect);
     canvas.drawRect(rect, paint);
+
+    if (t > 0.05 && t < 0.95) {
+      final pulsePhase = (t * 3.0) % 1.0;
+      final pulseAlpha = (1.0 - pulsePhase) * 0.4;
+      final pulseWidth = 0.03 + pulsePhase * 0.02;
+
+      final innerStop = (normalizedRadius - pulseWidth).clamp(0.0, 1.0);
+      final outerStop = normalizedRadius.clamp(0.0, 1.0);
+
+      final pulseGradient = RadialGradient(
+        center: center,
+        radius: normalizedRadius + 0.01,
+        colors: [
+          Colors.transparent,
+          fillColor.withValues(alpha: pulseAlpha * 0.3),
+          fillColor.withValues(alpha: pulseAlpha),
+          fillColor.withValues(alpha: pulseAlpha * 0.5),
+          Colors.transparent,
+        ],
+        stops: [0.0, innerStop, (innerStop + outerStop) / 2, outerStop, 1.0],
+      );
+      final pulsePaint = Paint()..shader = pulseGradient.createShader(rect);
+      canvas.drawRect(rect, pulsePaint);
+    }
   }
 
   @override
@@ -132,7 +145,6 @@ class _ThemeRipplePainter extends CustomPainter {
       Offset(0, size.height),
       Offset(size.width, size.height),
     ];
-
     double maxD = 0;
     for (final c in corners) {
       final dx = o.dx - c.dx;

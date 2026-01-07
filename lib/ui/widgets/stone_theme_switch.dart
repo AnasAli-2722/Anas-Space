@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
 import '../../core/theme/theme_cubit.dart';
 
 class StoneThemeSwitch extends StatefulWidget {
   const StoneThemeSwitch({super.key});
-
   @override
   State<StoneThemeSwitch> createState() => _StoneThemeSwitchState();
 }
@@ -16,19 +15,14 @@ class _StoneThemeSwitchState extends State<StoneThemeSwitch> {
   Offset _thumbCenterGlobal({required bool isDark}) {
     final ctx = _key.currentContext;
     if (ctx == null) return Offset.zero;
-
     final renderObject = ctx.findRenderObject();
     if (renderObject is! RenderBox) return Offset.zero;
-
     final topLeft = renderObject.localToGlobal(Offset.zero);
     final size = renderObject.size;
-
-    // Approximate thumb center within the control's bounds.
     final thumbCenterLocal = Offset(
       isDark ? (size.width - size.height / 2) : (size.height / 2),
       size.height / 2,
     );
-
     return topLeft + thumbCenterLocal;
   }
 
@@ -39,11 +33,9 @@ class _StoneThemeSwitchState extends State<StoneThemeSwitch> {
       if (pending != null) return pending.targetMode == ThemeMode.dark;
       return c.state.themeMode == ThemeMode.dark;
     });
-
     final cs = Theme.of(context).colorScheme;
     final track = cs.surface;
     final outline = cs.outline.withValues(alpha: 0.75);
-
     final thumbBase = Color.lerp(cs.surface, cs.onSurface, 0.06) ?? cs.surface;
     final thumbShadow = Colors.black.withValues(alpha: 0.45);
 
@@ -54,7 +46,7 @@ class _StoneThemeSwitchState extends State<StoneThemeSwitch> {
         child: InkWell(
           borderRadius: BorderRadius.circular(999),
           onTap: () {
-            // Ripple should originate from the *current* thumb location.
+            HapticFeedback.lightImpact();
             final origin = _thumbCenterGlobal(isDark: isDark);
             context.read<ThemeCubit>().requestToggle(origin: origin);
           },
@@ -77,7 +69,6 @@ class _StoneThemeSwitchState extends State<StoneThemeSwitch> {
                 ],
               ),
               boxShadow: [
-                // Subtle carved depth
                 BoxShadow(
                   color: Colors.black.withValues(alpha: isDark ? 0.55 : 0.12),
                   blurRadius: 10,
@@ -131,13 +122,40 @@ class _StoneThemeSwitchState extends State<StoneThemeSwitch> {
                     ),
                   ),
                   child: Center(
-                    child: Icon(
-                      isDark
-                          ? Icons.nights_stay_rounded
-                          : Icons.wb_sunny_rounded,
-                      size: 16,
-                      color: cs.onSurface.withValues(
-                        alpha: isDark ? 0.85 : 0.65,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 320),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (child, animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: RotationTransition(
+                            turns: Tween<double>(
+                              begin: isDark ? -0.25 : 0.25,
+                              end: 0.0,
+                            ).animate(animation),
+                            child: ScaleTransition(
+                              scale: Tween<double>(begin: 0.5, end: 1.0)
+                                  .animate(
+                                    CurvedAnimation(
+                                      parent: animation,
+                                      curve: Curves.elasticOut,
+                                    ),
+                                  ),
+                              child: child,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Icon(
+                        isDark
+                            ? Icons.nights_stay_rounded
+                            : Icons.wb_sunny_rounded,
+                        key: ValueKey<bool>(isDark),
+                        size: 16,
+                        color: cs.onSurface.withValues(
+                          alpha: isDark ? 0.85 : 0.65,
+                        ),
                       ),
                     ),
                   ),
