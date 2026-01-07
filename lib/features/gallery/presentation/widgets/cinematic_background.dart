@@ -1,66 +1,76 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
-import 'dart:ui';
 
-class CinematicBackground extends StatelessWidget {
+class CinematicBackground extends StatefulWidget {
   final Widget child;
   const CinematicBackground({super.key, required this.child});
 
   @override
+  State<CinematicBackground> createState() => _CinematicBackgroundState();
+}
+
+class _CinematicBackgroundState extends State<CinematicBackground>
+    with SingleTickerProviderStateMixin {
+  @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final bgA = Theme.of(context).scaffoldBackgroundColor;
+    final bgB = isDark
+        ? bgA
+        : (Color.lerp(bgA, cs.surface, 0.16) ?? cs.surface);
+
     return Stack(
       children: [
+        // Base: pure matte charcoal in dark mode; soft paper wash in light.
         Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF050505), Color(0xFF13131F), Color(0xFF000000)],
-              stops: [0.0, 0.6, 1.0],
+          decoration: isDark
+              ? BoxDecoration(color: bgA)
+              : BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [bgA, bgB, bgA],
+                    stops: const [0.0, 0.5, 1.0],
+                  ),
+                ),
+        ),
+
+        // Subtle matte grain (large surface only)
+        Positioned.fill(
+          child: IgnorePointer(
+            child: Opacity(
+              opacity: isDark ? 0.10 : 0.045,
+              child: CustomPaint(
+                painter: _StoneGrainPainter(color: cs.onSurface),
+                size: Size.infinite,
+              ),
             ),
           ),
         ),
 
-        IgnorePointer(
-          child: Opacity(
-            opacity: 0.03,
-            child: CustomPaint(
-              painter: _ProceduralNoisePainter(),
-              size: Size.infinite,
-            ),
-          ),
-        ),
-
-        SafeArea(child: child),
+        SafeArea(child: widget.child),
       ],
     );
   }
 }
 
-class _ProceduralNoisePainter extends CustomPainter {
-  final Random _random = Random();
+class _StoneGrainPainter extends CustomPainter {
+  final Color color;
+
+  _StoneGrainPainter({required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white;
+    final paint = Paint()..color = color.withValues(alpha: 0.07);
+    // Deterministic speckle: cheap, stable, and subtle.
+    for (int i = 0; i < 2200; i++) {
+      final dx = (i * 13.0) % size.width;
+      final dy = (i * 7.0) % size.height;
 
-    const double step = 4;
-
-    final List<Offset> points = [];
-    for (double y = 0; y < size.height; y += step) {
-      for (double x = 0; x < size.width; x += step) {
-        if (_random.nextDouble() > 0.8) {
-          points.add(
-            Offset(
-              x + _random.nextDouble() * step,
-              y + _random.nextDouble() * step,
-            ),
-          );
-        }
-      }
+      final radius = (i % 7 == 0) ? 1.3 : 0.9;
+      canvas.drawCircle(Offset(dx, dy), radius, paint);
     }
-
-    canvas.drawPoints(PointMode.points, points, paint);
   }
 
   @override

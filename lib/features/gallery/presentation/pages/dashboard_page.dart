@@ -1,8 +1,9 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:anas_space/ui/widgets/extruded_surface.dart';
+import 'package:anas_space/ui/theme/cyberpunk_theme.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../domain/unified_asset.dart';
@@ -12,6 +13,7 @@ import '../../presentation/widgets/cinematic_background.dart';
 import '../../presentation/widgets/glass_app_bar.dart';
 import '../constants/ui_constants.dart';
 import '../../../../core/services/secure_storage_service.dart';
+import '../../../../ui/widgets/stone_theme_switch.dart';
 
 import '../../../sync/presentation/pages/sync_page.dart';
 
@@ -28,8 +30,8 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  late GalleryService _galleryService;
-  late SecureStorageService _secureStorage;
+  late final GalleryService _galleryService;
+  final SecureStorageService _secureStorage = SecureStorageService();
 
   List<UnifiedAsset> _gallery = [];
   Map<String, List<UnifiedAsset>> _groupedGallery = {};
@@ -55,7 +57,7 @@ class _DashboardPageState extends State<DashboardPage> {
       final dynamic editor = PhotoManager.editor;
       final dynamic result = await (editor as dynamic).moveToTrash([asset]);
 
-      final ok = result is List && result.contains(asset.id);
+      final ok = result is bool ? result : result != null;
       if (ok) _androidMoveToTrashSupported = true;
       return ok;
     } catch (e, st) {
@@ -74,7 +76,6 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
     _galleryService = widget.galleryService;
-    _secureStorage = SecureStorageService();
     _bootSystem();
   }
 
@@ -115,6 +116,7 @@ class _DashboardPageState extends State<DashboardPage> {
         }
       }
     });
+
     _updateMasterGallery(local: newAssets);
   }
 
@@ -122,7 +124,6 @@ class _DashboardPageState extends State<DashboardPage> {
     if (local != null) _gallery = local;
 
     _gallery.sort((a, b) => b.dateModified.compareTo(a.dateModified));
-
     _groupedGallery = _groupAssets(_gallery);
 
     if (mounted) {
@@ -189,35 +190,83 @@ class _DashboardPageState extends State<DashboardPage> {
     String input = "";
     await showDialog(
       context: context,
+      barrierColor: CyberpunkTheme.darkBg.withValues(alpha: 0.8),
       builder: (ctx) => AlertDialog(
-        backgroundColor: UIConstants.dialogBackgroundColor,
-        title: Text(
-          isSetup ? "Set PIN" : "Enter PIN",
-          style: const TextStyle(color: Colors.white),
-        ),
-        content: TextField(
-          autofocus: true,
-          obscureText: true,
-          keyboardType: TextInputType.number,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: UIConstants.pinInputFontSize,
-            letterSpacing: UIConstants.pinInputLetterSpacing,
+        backgroundColor: CyberpunkTheme.darkBgSecondary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: CyberpunkTheme.neonMagenta.withValues(alpha: 0.5),
+            width: 2,
           ),
-          onChanged: (v) => input = v,
-          onSubmitted: (_) {
-            Navigator.pop(ctx);
-            _processPin(input, isSetup);
+        ),
+        title: ShaderMask(
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              colors: [CyberpunkTheme.neonCyan, CyberpunkTheme.neonMagenta],
+            ).createShader(bounds);
           },
+          child: Text(
+            isSetup ? "SET PIN" : "ENTER PIN",
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2.0,
+            ),
+          ),
+        ),
+        content: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                CyberpunkTheme.neonMagenta.withValues(alpha: 0.1),
+                Colors.transparent,
+              ],
+            ),
+            border: Border.all(
+              color: CyberpunkTheme.neonMagenta.withValues(alpha: 0.5),
+            ),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: TextField(
+            autofocus: true,
+            obscureText: true,
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: CyberpunkTheme.neonMagenta,
+              fontSize: UIConstants.pinInputFontSize,
+              letterSpacing: UIConstants.pinInputLetterSpacing,
+              fontWeight: FontWeight.bold,
+            ),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              hintText: "••••",
+              hintStyle: TextStyle(
+                color: CyberpunkTheme.neonMagenta.withValues(alpha: 0.3),
+              ),
+            ),
+            onChanged: (v) => input = v,
+            onSubmitted: (_) {
+              Navigator.pop(ctx);
+              _processPin(input, isSetup);
+            },
+          ),
         ),
         actions: [
           TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: CyberpunkTheme.neonCyan,
+            ),
             onPressed: () {
               Navigator.pop(ctx);
               _processPin(input, isSetup);
             },
-            child: const Text("OK"),
+            child: const Text(
+              "OK",
+              style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.0),
+            ),
           ),
         ],
       ),
@@ -325,7 +374,6 @@ class _DashboardPageState extends State<DashboardPage> {
         try {
           final asset = assetsById[id];
 
-          // Desktop/Windows files
           final localPath = asset?.localFile?.path;
           if (localPath != null) {
             final f = File(localPath);
@@ -342,7 +390,6 @@ class _DashboardPageState extends State<DashboardPage> {
             continue;
           }
 
-          // Mobile gallery assets (Android)
           final deviceAsset = asset?.deviceAsset;
           if (deviceAsset != null) {
             final permission = await PhotoManager.requestPermissionExtend();
@@ -354,7 +401,6 @@ class _DashboardPageState extends State<DashboardPage> {
               continue;
             }
 
-            // Fallback: permanent delete.
             try {
               final deletedIds = await PhotoManager.editor.deleteWithIds([
                 deviceAsset.id,
@@ -488,6 +534,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       : null,
                   actions: _isSelectionMode
                       ? [
+                          const StoneThemeSwitch(),
                           TextButton(
                             onPressed: () {
                               setState(() {
@@ -502,6 +549,7 @@ class _DashboardPageState extends State<DashboardPage> {
                           ),
                         ]
                       : [
+                          const StoneThemeSwitch(),
                           _NavBarIcon(
                             icon: Icons.album_outlined,
                             onTap: () => Navigator.push(
@@ -544,15 +592,13 @@ class _DashboardPageState extends State<DashboardPage> {
 
                 Expanded(
                   child: _isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                            color: Colors.purpleAccent,
-                          ),
-                        )
+                      ? const Center(child: CircularProgressIndicator())
                       : RefreshIndicator(
                           onRefresh: _refreshGallery,
-                          color: Colors.purpleAccent,
-                          backgroundColor: Colors.black,
+                          color: Theme.of(context).colorScheme.onSurface,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.surface,
                           child: CustomScrollView(
                             physics: const BouncingScrollPhysics(),
                             slivers: [
@@ -563,7 +609,10 @@ class _DashboardPageState extends State<DashboardPage> {
                                     child: Text(
                                       entry.key.toUpperCase(),
                                       style: TextStyle(
-                                        color: Colors.white.withOpacity(0.8),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.8),
                                         fontSize:
                                             UIConstants.sectionHeaderFontSize,
                                         fontWeight: FontWeight.bold,
@@ -623,63 +672,34 @@ class _DashboardPageState extends State<DashboardPage> {
                 bottom: UIConstants.bottomActionBarBottomMargin,
                 left: UIConstants.bottomActionBarSideMargin,
                 right: UIConstants.bottomActionBarSideMargin,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(
-                    UIConstants.bottomActionBarBorderRadius,
-                  ),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(
-                      sigmaX: UIConstants.glassBlurSigma,
-                      sigmaY: UIConstants.glassBlurSigma,
-                    ),
-                    child: Container(
-                      height: UIConstants.bottomActionBarHeight,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(
-                          UIConstants.glassBackgroundOpacity,
+                child: ExtrudedSurface(
+                  radius: UIConstants.bottomActionBarBorderRadius,
+                  depth: 10,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: SizedBox(
+                    height: UIConstants.bottomActionBarHeight,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        ExtrudedIconButton(
+                          icon: Icons.delete_forever,
+                          onTap: _deleteSelected,
+                          iconColor: Theme.of(context).colorScheme.error,
                         ),
-                        borderRadius: BorderRadius.circular(
-                          UIConstants.bottomActionBarBorderRadius,
+                        Container(
+                          width: 1.5,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.outlineVariant.withValues(alpha: 0.8),
+                          ),
                         ),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.1),
+                        ExtrudedIconButton(
+                          icon: _isLockerMode ? Icons.public : Icons.security,
+                          onTap: _moveSelectedFiles,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(
-                              UIConstants.glassBlurShadowOpacity,
-                            ),
-                            blurRadius: UIConstants.glassBlurShadowBlurRadius,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          IconButton(
-                            onPressed: _deleteSelected,
-                            icon: const Icon(
-                              Icons.delete_forever,
-                              color: Colors.redAccent,
-                            ),
-                            tooltip: "Delete",
-                          ),
-                          Container(
-                            width: 1,
-                            height: 20,
-                            color: Colors.white24,
-                          ),
-                          IconButton(
-                            onPressed: _moveSelectedFiles,
-                            icon: Icon(
-                              _isLockerMode ? Icons.public : Icons.security,
-                              color: Colors.purpleAccent,
-                            ),
-                            tooltip: _isLockerMode ? "Restore" : "Hide",
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
                   ),
                 ),
@@ -694,24 +714,24 @@ class _DashboardPageState extends State<DashboardPage> {
 class _NavBarIcon extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  final Color color;
+  final Color? color;
 
-  const _NavBarIcon({
-    required this.icon,
-    required this.onTap,
-    this.color = Colors.white,
-  });
+  const _NavBarIcon({required this.icon, required this.onTap, this.color});
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: Icon(
-        icon,
-        color: color.withOpacity(0.8),
-        size: UIConstants.navBarIconSize,
+    final cs = Theme.of(context).colorScheme;
+    final iconColor = (color ?? cs.onSurface).withValues(alpha: 0.85);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      child: ExtrudedIconButton(
+        icon: icon,
+        onTap: onTap,
+        size: 40,
+        radius: 14,
+        depth: 6,
+        iconColor: iconColor,
       ),
-      onPressed: onTap,
-      splashRadius: UIConstants.navBarSplashRadius,
     );
   }
 }
@@ -720,7 +740,7 @@ class GrainPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint();
-    paint.color = Colors.white.withOpacity(0.02);
+    paint.color = Colors.white.withValues(alpha: 0.02);
     for (int i = 0; i < 1000; i++) {
       final dx = (i * 13.0) % size.width;
       final dy = (i * 7.0) % size.height;

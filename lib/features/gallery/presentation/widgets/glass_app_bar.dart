@@ -1,7 +1,8 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
+
+import 'package:anas_space/ui/widgets/extruded_surface.dart';
 
 class GlassAppBar extends StatelessWidget {
   final String title;
@@ -20,97 +21,95 @@ class GlassAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDesktop = Platform.isWindows;
+    final cs = Theme.of(context).colorScheme;
+    final base = Theme.of(context).scaffoldBackgroundColor;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
-            ),
-            child: Row(
-              children: [
-                // 1. LEADING ICON
-                if (leading != null) ...[leading!, const SizedBox(width: 15)],
+      child: ExtrudedSurface(
+        radius: 20,
+        depth: 10,
+        color: base,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
+          children: [
+            // 1. LEADING ICON
+            if (leading != null) ...[leading!, const SizedBox(width: 15)],
 
-                // 2. DRAGGABLE TITLE AREA
-                Expanded(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.translucent, // Catch all touches
-                    onPanStart: (details) {
-                      if (isDesktop) {
-                        windowManager
-                            .startDragging(); // 👈 2. Native Drag Magic
-                      }
-                    },
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          title.toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 14,
-                            letterSpacing: 2.0,
-                          ),
-                        ),
-                        if (subtitle.isNotEmpty)
-                          Text(
-                            subtitle,
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.5),
-                              fontSize: 10,
-                            ),
-                          ),
-                      ],
+            // 2. DRAGGABLE TITLE AREA
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent, // Catch all touches
+                onPanStart: (details) {
+                  if (isDesktop) {
+                    windowManager.startDragging(); // 👈 2. Native Drag Magic
+                  }
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title.toUpperCase(),
+                      style: TextStyle(
+                        color: cs.onSurface,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        letterSpacing: 1.8,
+                      ),
                     ),
-                  ),
+                    if (subtitle.isNotEmpty)
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: cs.onSurface.withValues(alpha: 0.65),
+                          fontSize: 10,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                  ],
                 ),
-
-                if (actions != null) ...actions!,
-
-                if (isDesktop) ...[
-                  const SizedBox(width: 20),
-                  Container(
-                    height: 20,
-                    width: 1,
-                    color: Colors.white.withOpacity(0.2),
-                  ), // Divider
-                  const SizedBox(width: 10),
-
-                  // Minimize
-                  _WindowButton(
-                    icon: Icons.remove,
-                    onTap: () async => await windowManager.minimize(),
-                  ),
-                  // Maximize / Restore
-                  _WindowButton(
-                    icon: Icons.crop_square,
-                    onTap: () async {
-                      if (await windowManager.isMaximized()) {
-                        windowManager.unmaximize();
-                      } else {
-                        windowManager.maximize();
-                      }
-                    },
-                  ),
-                  _WindowButton(
-                    icon: Icons.close,
-                    color: Colors.redAccent,
-                    onTap: () async => await windowManager.close(),
-                  ),
-                ],
-              ],
+              ),
             ),
-          ),
+
+            if (actions != null) ...actions!,
+
+            if (isDesktop) ...[
+              const SizedBox(width: 20),
+              Container(
+                height: 20,
+                width: 1.5,
+                decoration: BoxDecoration(
+                  color: cs.outline.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(width: 10),
+
+              // Minimize
+              _WindowButton(
+                icon: Icons.remove,
+                color: cs.onSurface,
+                onTap: () async => await windowManager.minimize(),
+              ),
+              // Maximize / Restore
+              _WindowButton(
+                icon: Icons.crop_square,
+                color: cs.onSurface,
+                onTap: () async {
+                  if (await windowManager.isMaximized()) {
+                    windowManager.unmaximize();
+                  } else {
+                    windowManager.maximize();
+                  }
+                },
+              ),
+              _WindowButton(
+                icon: Icons.close,
+                color: cs.error,
+                onTap: () async => await windowManager.close(),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -125,18 +124,23 @@ class _WindowButton extends StatelessWidget {
   const _WindowButton({
     required this.icon,
     required this.onTap,
-    this.color = Colors.white,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    return IconButton(
-      icon: Icon(icon, size: 18, color: color.withOpacity(0.8)),
-      onPressed: onTap,
-      splashRadius: 15,
-      constraints: const BoxConstraints(minWidth: 35, minHeight: 35),
-      padding: EdgeInsets.zero,
-      tooltip: "Window Control",
+    final cs = Theme.of(context).colorScheme;
+
+    final isClose = color == cs.error;
+
+    return ExtrudedIconButton(
+      icon: icon,
+      onTap: onTap,
+      size: 34,
+      radius: 10,
+      depth: 5,
+      iconColor: isClose ? cs.error : cs.onSurface.withValues(alpha: 0.85),
+      surfaceColor: Theme.of(context).scaffoldBackgroundColor,
     );
   }
 }

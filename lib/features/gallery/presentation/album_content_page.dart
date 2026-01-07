@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../gallery/domain/album_model.dart';
 import '../presentation/widgets/asset_tile.dart';
 import '../../gallery/domain/unified_asset.dart';
+import '../../../ui/widgets/stone_theme_switch.dart';
 
 class AlbumContentPage extends StatefulWidget {
   final UnifiedAlbum album;
@@ -55,20 +56,74 @@ class _AlbumContentPageState extends State<AlbumContentPage> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDesktop = MediaQuery.of(context).size.width > 600;
+    final double screenWidth = MediaQuery.of(context).size.width;
+
+    // Responsive cross axis count
+    int crossAxisCount;
+    if (screenWidth > 1200) {
+      crossAxisCount = 6;
+    } else if (screenWidth > 800) {
+      crossAxisCount = 4;
+    } else if (screenWidth > 500) {
+      crossAxisCount = 3;
+    } else {
+      crossAxisCount = 2;
+    }
+
+    final double spacing = isDesktop ? 10 : 6;
+    final double padding = isDesktop ? 16 : 10;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.album.name),
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
+        title: Text(
+          widget.album.name.toUpperCase(),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.5,
+          ),
+        ),
+        actions: [
+          const StoneThemeSwitch(),
+          Container(
+            margin: EdgeInsets.only(right: isDesktop ? 16 : 12),
+            padding: EdgeInsets.symmetric(
+              horizontal: isDesktop ? 12 : 10,
+              vertical: 6,
+            ),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.outline.withValues(alpha: 0.55),
+                width: 1,
+              ),
+              borderRadius: BorderRadius.circular(10),
+              color: Theme.of(context).colorScheme.surface,
+            ),
+            child: Text(
+              "${_assets.length} ITEMS",
+              style: TextStyle(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.75),
+                fontWeight: FontWeight.w700,
+                fontSize: isDesktop ? 13 : 11,
+                letterSpacing: 0.8,
+              ),
+            ),
+          ),
+        ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
           : GridView.builder(
-              padding: const EdgeInsets.all(10),
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              padding: EdgeInsets.all(padding),
+              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
                 maxCrossAxisExtent: 150,
-                mainAxisSpacing: 5,
-                crossAxisSpacing: 5,
+                mainAxisSpacing: spacing,
+                crossAxisSpacing: spacing,
               ),
               itemCount: _assets.length,
               itemBuilder: (ctx, i) => AssetTile(

@@ -5,10 +5,13 @@ import 'package:window_manager/window_manager.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'features/gallery/presentation/pages/dashboard_page.dart';
+import 'ui/pages/splash_screen.dart';
+import 'core/theme/theme_cubit.dart';
 import 'features/gallery/data/gallery_service.dart';
 import 'features/sync/data/sync_repository_impl.dart';
 import 'features/sync/presentation/cubit/sync_cubit.dart';
+import 'ui/theme/stone_theme.dart';
+import 'ui/widgets/theme_ripple_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -60,21 +63,26 @@ class AnasSpaceApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
-      providers: [BlocProvider(create: (_) => SyncCubit(syncRepo))],
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Anas Space',
-        theme: ThemeData(
-          brightness: Brightness.dark,
-          scaffoldBackgroundColor: const Color(0xFF0A0A0A),
-          useMaterial3: true,
-          fontFamily: 'Segoe UI',
-          colorScheme: const ColorScheme.dark(
-            primary: Colors.blueAccent,
-            error: Colors.redAccent,
-          ),
-        ),
-        home: DashboardPage(galleryService: galleryService),
+      providers: [
+        BlocProvider(create: (_) => SyncCubit(syncRepo)),
+        BlocProvider(create: (_) => ThemeCubit()),
+      ],
+      child: BlocBuilder<ThemeCubit, ThemeState>(
+        buildWhen: (prev, next) => prev.themeMode != next.themeMode,
+        builder: (context, themeState) {
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'Anas Space',
+            theme: StoneThemes.light,
+            darkTheme: StoneThemes.dark,
+            themeMode: themeState.themeMode,
+            builder: (context, child) {
+              if (child == null) return const SizedBox.shrink();
+              return ThemeRippleOverlay(child: child);
+            },
+            home: SplashScreen(galleryService: galleryService),
+          );
+        },
       ),
     );
   }

@@ -42,6 +42,7 @@ dependencies:
   chewie: ^1.13.0
   intl: ^0.20.2
   video_thumbnail: ^0.5.6
+  animations: ^2.0.11
 
 
 dev_dependencies:
@@ -65,6 +66,11 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Shaders for Cyberpunk Glassmorphism effects
+  shaders:
+    - shaders/hologram.frag
+    - shaders/glitch_effect.frag
 
   # To add assets to your application, add an assets section, like this:
   # assets:

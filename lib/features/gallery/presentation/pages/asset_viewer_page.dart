@@ -4,6 +4,7 @@ import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import '../../domain/unified_asset.dart';
+import '../widgets/cinematic_background.dart';
 
 class AssetViewerPage extends StatefulWidget {
   final UnifiedAsset asset;
@@ -92,24 +93,34 @@ class _AssetViewerPageState extends State<AssetViewerPage> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final bool isDesktop = MediaQuery.of(context).size.width > 600;
+
     return Scaffold(
-      backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        iconTheme: const IconThemeData(color: Colors.white),
         elevation: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Divider(
+            height: 1,
+            thickness: 1,
+            color: cs.outlineVariant.withValues(alpha: 0.8),
+          ),
+        ),
       ),
-      body: Center(
-        child: _isVideo
-            ? _buildVideoPlayer()
-            : Hero(tag: widget.asset.id, child: _buildFullImage()),
+      body: CinematicBackground(
+        child: Center(
+          child: _isVideo
+              ? _buildVideoPlayer()
+              : Hero(tag: widget.asset.id, child: _buildFullImage()),
+        ),
       ),
     );
   }
 
   Widget _buildVideoPlayer() {
     if (!_isInitialized || _chewieController == null) {
-      return const CircularProgressIndicator(color: Colors.blueAccent);
+      return const CircularProgressIndicator(strokeWidth: 2);
     }
     return AspectRatio(
       aspectRatio: _videoController!.value.aspectRatio,

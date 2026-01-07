@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
 import '../../domain/unified_asset.dart';
+import '../../../../../ui/theme/cyberpunk_theme.dart';
 
 class ViewerPage extends StatelessWidget {
   final UnifiedAsset asset;
@@ -10,10 +11,30 @@ class ViewerPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDesktop = MediaQuery.of(context).size.width > 600;
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: CyberpunkTheme.darkBg,
       body: Stack(
         children: [
+          // Holographic gradient overlay
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment.center,
+                  radius: 1.5,
+                  colors: [
+                    CyberpunkTheme.darkBg,
+                    CyberpunkTheme.neonCyan.withOpacity(0.05),
+                    CyberpunkTheme.neonMagenta.withOpacity(0.05),
+                    CyberpunkTheme.darkBg,
+                  ],
+                  stops: const [0.0, 0.3, 0.7, 1.0],
+                ),
+              ),
+            ),
+          ),
           Center(
             child: InteractiveViewer(
               minScale: 0.5,
@@ -21,18 +42,86 @@ class ViewerPage extends StatelessWidget {
               child: _buildImage(),
             ),
           ),
+          // Cyberpunk close button
           Positioned(
-            top: 40,
-            right: 20,
-            child: IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(20),
+            top: isDesktop ? 40 : 30,
+            right: isDesktop ? 30 : 20,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [CyberpunkTheme.neonCyan, CyberpunkTheme.neonMagenta],
                 ),
-                child: const Icon(Icons.close, color: Colors.white, size: 24),
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: CyberpunkTheme.neonGlow(
+                  CyberpunkTheme.neonCyan,
+                  intensity: 0.6,
+                ),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => Navigator.pop(context),
+                  borderRadius: BorderRadius.circular(30),
+                  child: Container(
+                    padding: EdgeInsets.all(isDesktop ? 12 : 10),
+                    child: Icon(
+                      Icons.close,
+                      color: Colors.black,
+                      size: isDesktop ? 28 : 24,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Info overlay (optional)
+          Positioned(
+            bottom: isDesktop ? 30 : 20,
+            left: isDesktop ? 30 : 20,
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: isDesktop ? 16 : 12,
+                vertical: isDesktop ? 10 : 8,
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    CyberpunkTheme.darkBgSecondary.withOpacity(0.9),
+                    CyberpunkTheme.darkBg.withOpacity(0.9),
+                  ],
+                ),
+                border: Border.all(
+                  color: CyberpunkTheme.neonCyan.withOpacity(0.3),
+                  width: 1,
+                ),
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: CyberpunkTheme.neonCyan.withOpacity(0.1),
+                    blurRadius: 8,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.zoom_in,
+                    color: CyberpunkTheme.neonCyan,
+                    size: isDesktop ? 18 : 16,
+                  ),
+                  SizedBox(width: isDesktop ? 8 : 6),
+                  Text(
+                    "PINCH TO ZOOM",
+                    style: TextStyle(
+                      color: CyberpunkTheme.neonCyan,
+                      fontFamily: 'Courier',
+                      fontSize: isDesktop ? 12 : 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -52,7 +141,9 @@ class ViewerPage extends StatelessWidget {
           if (s.hasData && s.data != null) {
             return Image.file(s.data!, fit: BoxFit.contain);
           }
-          return const CircularProgressIndicator(color: Colors.blueAccent);
+          return const CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation(CyberpunkTheme.neonCyan),
+          );
         },
       );
     }

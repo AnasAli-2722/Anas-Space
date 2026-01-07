@@ -7,6 +7,7 @@ import '../../domain/album_model.dart';
 import '../../domain/unified_asset.dart';
 import '../widgets/video_thumbnail_view.dart';
 import '../album_content_page.dart';
+import '../../../../ui/widgets/stone_theme_switch.dart';
 
 class AlbumsPage extends StatefulWidget {
   final GalleryService galleryService;
@@ -54,20 +55,50 @@ class _AlbumsPageState extends State<AlbumsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDarkTheme = Theme.of(context).brightness == Brightness.dark;
+    final bool isDesktop = MediaQuery.of(context).size.width > 600;
+    final double screenWidth = MediaQuery.of(context).size.width;
+
+    // Responsive cross axis count
+    int crossAxisCount;
+    if (screenWidth > 1200) {
+      crossAxisCount = 4;
+    } else if (screenWidth > 800) {
+      crossAxisCount = 3;
+    } else if (screenWidth > 500) {
+      crossAxisCount = 2;
+    } else {
+      crossAxisCount = 2;
+    }
+
+    final double spacing = isDesktop ? 16 : 12;
+    final double padding = isDesktop ? 16 : 12;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Albums"),
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
+        actions: const [StoneThemeSwitch()],
+        title: Text(
+          'ALBUMS',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 2.0,
+          ),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Divider(height: 1, thickness: 1),
+        ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
           : GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
+              padding: EdgeInsets.all(padding),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: spacing,
+                mainAxisSpacing: spacing,
                 childAspectRatio: 0.8,
               ),
               itemCount: _albums.length,
@@ -86,74 +117,160 @@ class _AlbumsPageState extends State<AlbumsPage> {
                       ),
                     );
                   },
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.white12),
-                            color: Colors.grey[900],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(15),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                if (hasCover) ...[
-                                  if (isVideoCover &&
-                                      album.coverAsset!.localFile != null)
-                                    VideoThumbnailView(
-                                      videoFile: album.coverAsset!.localFile!,
-                                    )
-                                  else if (album.coverAsset!.deviceAsset !=
-                                      null)
-                                    AssetEntityImage(
-                                      album.coverAsset!.deviceAsset!,
-                                      isOriginal: false,
-                                      thumbnailSize: const ThumbnailSize.square(
-                                        200,
-                                      ),
-                                      fit: BoxFit.cover,
-                                    )
-                                  else if (album.coverAsset!.localFile != null)
-                                    Image.file(
-                                      album.coverAsset!.localFile!,
-                                      fit: BoxFit.cover,
-                                    ),
-                                ],
-
-                                Center(
-                                  child: _buildPlaceholderIcon(
-                                    hasCover,
-                                    isVideoCover,
-                                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color.lerp(
+                            cs.surface,
+                            cs.onSurface,
+                            isDarkTheme ? 0.06 : 0.03,
+                          )!,
+                          cs.surface,
+                          Color.lerp(
+                            cs.surface,
+                            cs.onSurface,
+                            isDarkTheme ? 0.02 : 0.01,
+                          )!,
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(isDesktop ? 16 : 12),
+                      border: Border.all(
+                        color: cs.outlineVariant.withValues(alpha: 0.85),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: cs.shadow.withValues(alpha: 0.25),
+                          blurRadius: 16,
+                          spreadRadius: 0,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Container(
+                            margin: EdgeInsets.all(isDesktop ? 8 : 6),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(
+                                isDesktop ? 12 : 8,
+                              ),
+                              border: Border.all(
+                                color: cs.outlineVariant.withValues(
+                                  alpha: 0.75,
                                 ),
-                              ],
+                                width: 1,
+                              ),
+                              color: cs.surface,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(
+                                isDesktop ? 11 : 7,
+                              ),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  if (hasCover) ...[
+                                    if (isVideoCover &&
+                                        album.coverAsset!.localFile != null)
+                                      VideoThumbnailView(
+                                        videoFile: album.coverAsset!.localFile!,
+                                      )
+                                    else if (album.coverAsset!.deviceAsset !=
+                                        null)
+                                      AssetEntityImage(
+                                        album.coverAsset!.deviceAsset!,
+                                        isOriginal: false,
+                                        thumbnailSize:
+                                            const ThumbnailSize.square(200),
+                                        fit: BoxFit.cover,
+                                      )
+                                    else if (album.coverAsset!.localFile !=
+                                        null)
+                                      Image.file(
+                                        album.coverAsset!.localFile!,
+                                        fit: BoxFit.cover,
+                                      ),
+                                  ],
+                                  // Subtle stone overlay (only on this large surface)
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          cs.onSurface.withValues(
+                                            alpha: hasCover ? 0.06 : 0.08,
+                                          ),
+                                          Colors.transparent,
+                                          cs.onSurface.withValues(
+                                            alpha: hasCover ? 0.04 : 0.06,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  Center(
+                                    child: _buildPlaceholderIcon(
+                                      hasCover,
+                                      isVideoCover,
+                                      isDesktop,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        album.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Colors.white,
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isDesktop ? 12 : 8,
+                            vertical: isDesktop ? 8 : 6,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                album.name,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: isDesktop ? 16 : 14,
+                                  color: cs.onSurface,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.photo_library,
+                                    size: isDesktop ? 14 : 12,
+                                    color: cs.onSurface.withValues(alpha: 0.75),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "${album.count} items",
+                                    style: TextStyle(
+                                      color: cs.onSurface.withValues(
+                                        alpha: 0.70,
+                                      ),
+                                      fontSize: isDesktop ? 12 : 11,
+                                      fontFamily: 'Courier',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        "${album.count} items",
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.5),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },
@@ -161,9 +278,36 @@ class _AlbumsPageState extends State<AlbumsPage> {
     );
   }
 
-  Widget _buildPlaceholderIcon(bool hasCover, bool isVideoCover) {
+  Widget _buildPlaceholderIcon(
+    bool hasCover,
+    bool isVideoCover,
+    bool isDesktop,
+  ) {
+    final cs = Theme.of(context).colorScheme;
+    final isDarkTheme = Theme.of(context).brightness == Brightness.dark;
+
     if (!hasCover) {
-      return const Icon(Icons.folder_open, size: 50, color: Colors.white24);
+      return Container(
+        padding: EdgeInsets.all(isDesktop ? 16 : 12),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            colors: [
+              Color.lerp(cs.surface, cs.onSurface, isDarkTheme ? 0.08 : 0.04)!,
+              cs.surface,
+            ],
+          ),
+          border: Border.all(
+            color: cs.outlineVariant.withValues(alpha: 0.85),
+            width: 2,
+          ),
+        ),
+        child: Icon(
+          Icons.folder_open,
+          size: isDesktop ? 50 : 40,
+          color: cs.onSurface.withValues(alpha: 0.75),
+        ),
+      );
     }
 
     if (isVideoCover) {

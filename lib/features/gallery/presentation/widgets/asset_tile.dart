@@ -21,6 +21,7 @@ class AssetTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     bool isVideo = false;
     if (asset.deviceAsset != null) {
       isVideo = asset.deviceAsset!.type == AssetType.video;
@@ -50,20 +51,52 @@ class AssetTile extends StatelessWidget {
         children: [
           Positioned.fill(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(12),
               child: Container(
-                color: Colors.grey[900],
+                decoration: BoxDecoration(
+                  color: cs.surface,
+                  border: Border.all(
+                    color: isSelected
+                        ? cs.primary
+                        : cs.outlineVariant.withValues(alpha: 0.55),
+                    width: isSelected ? 2.5 : 1.0,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: cs.shadow.withValues(alpha: 0.22),
+                            blurRadius: 18,
+                            offset: const Offset(0, 10),
+                          ),
+                        ]
+                      : null,
+                ),
                 child: _buildImageContent(context, isVideo),
               ),
             ),
           ),
 
           if (isVideo)
-            const Center(
-              child: Icon(
-                Icons.play_circle_fill,
-                color: Colors.white70,
-                size: 40,
+            Center(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: cs.surface.withValues(alpha: 0.72),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: cs.shadow.withValues(alpha: 0.35),
+                      blurRadius: 18,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(8),
+                child: Icon(
+                  Icons.play_circle_fill,
+                  color: cs.onSurface.withValues(alpha: 0.85),
+                  size: 36,
+                ),
               ),
             ),
 
@@ -71,12 +104,29 @@ class AssetTile extends StatelessWidget {
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.blueAccent.withOpacity(0.4),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blueAccent, width: 3),
+                  color: cs.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Center(
-                  child: Icon(Icons.check, color: Colors.white, size: 30),
+                child: Center(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: cs.primary,
+                      boxShadow: [
+                        BoxShadow(
+                          color: cs.shadow.withValues(alpha: 0.25),
+                          blurRadius: 16,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(6),
+                    child: const Icon(
+                      Icons.check,
+                      color: Colors.black,
+                      size: 24,
+                    ),
+                  ),
                 ),
               ),
             ),
