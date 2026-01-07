@@ -3,6 +3,7 @@ import 'package:anas_space/ui/widgets/extruded_surface.dart';
 import '../../data/gallery_service.dart';
 import '../../../../core/services/trash_service.dart';
 import '../../../../ui/widgets/stone_theme_switch.dart';
+import '../../../../ui/helpers/shadow_helpers.dart';
 
 class TrashPage extends StatefulWidget {
   final GalleryService galleryService;
@@ -324,10 +325,15 @@ class _TrashPageState extends State<TrashPage> {
                         ),
                         borderRadius: BorderRadius.circular(8),
                         boxShadow: [
-                          BoxShadow(
-                            color: cs.shadow.withValues(alpha: 0.15),
-                            blurRadius: 12,
-                            offset: const Offset(0, 8),
+                          subtleBoxShadow(
+                            context,
+                            color: cs.shadow,
+                            lightAlpha: 0.15,
+                            darkAlpha: 0.06,
+                            lightBlur: 12,
+                            darkBlur: 5,
+                            lightOffset: const Offset(0, 8),
+                            darkOffset: const Offset(0, 2),
                           ),
                         ],
                       ),

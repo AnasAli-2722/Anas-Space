@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photo_manager_image_provider/photo_manager_image_provider.dart';
+import '../../../../ui/helpers/shadow_helpers.dart';
 import '../../domain/unified_asset.dart';
 import '../pages/asset_viewer_page.dart';
 import 'video_thumbnail_view.dart';
@@ -64,10 +65,15 @@ class AssetTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: isSelected
                       ? [
-                          BoxShadow(
-                            color: cs.shadow.withValues(alpha: 0.22),
-                            blurRadius: 18,
-                            offset: const Offset(0, 10),
+                          subtleBoxShadow(
+                            context,
+                            color: cs.shadow,
+                            lightAlpha: 0.22,
+                            darkAlpha: 0.06,
+                            lightBlur: 18,
+                            darkBlur: 6,
+                            lightOffset: const Offset(0, 10),
+                            darkOffset: const Offset(0, 2),
                           ),
                         ]
                       : null,
@@ -84,10 +90,15 @@ class AssetTile extends StatelessWidget {
                   color: cs.surface.withValues(alpha: 0.72),
                   shape: BoxShape.circle,
                   boxShadow: [
-                    BoxShadow(
-                      color: cs.shadow.withValues(alpha: 0.35),
-                      blurRadius: 18,
-                      offset: const Offset(0, 10),
+                    subtleBoxShadow(
+                      context,
+                      color: cs.shadow,
+                      lightAlpha: 0.35,
+                      darkAlpha: 0.08,
+                      lightBlur: 18,
+                      darkBlur: 6,
+                      lightOffset: const Offset(0, 10),
+                      darkOffset: const Offset(0, 2),
                     ),
                   ],
                 ),
@@ -113,10 +124,15 @@ class AssetTile extends StatelessWidget {
                       shape: BoxShape.circle,
                       color: cs.primary,
                       boxShadow: [
-                        BoxShadow(
-                          color: cs.shadow.withValues(alpha: 0.25),
-                          blurRadius: 16,
-                          offset: const Offset(0, 8),
+                        subtleBoxShadow(
+                          context,
+                          color: cs.shadow,
+                          lightAlpha: 0.25,
+                          darkAlpha: 0.06,
+                          lightBlur: 16,
+                          darkBlur: 6,
+                          lightOffset: const Offset(0, 8),
+                          darkOffset: const Offset(0, 2),
                         ),
                       ],
                     ),

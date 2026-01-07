@@ -6,6 +6,7 @@ import '../cubit/sync_cubit.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../cubit/sync_state.dart';
 import '../../../../ui/widgets/stone_theme_switch.dart';
+import '../../../../ui/helpers/shadow_helpers.dart';
 
 class SyncPage extends StatefulWidget {
   const SyncPage({super.key});
@@ -179,10 +180,15 @@ class _SyncPageState extends State<SyncPage> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(
-                  color: cs.shadow.withValues(alpha: 0.18),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
+                subtleBoxShadow(
+                  context,
+                  color: cs.shadow,
+                  lightAlpha: 0.18,
+                  darkAlpha: 0.06,
+                  lightBlur: 16,
+                  darkBlur: 6,
+                  lightOffset: const Offset(0, 8),
+                  darkOffset: const Offset(0, 2),
                 ),
               ],
             ),
@@ -302,10 +308,15 @@ class _SyncPageState extends State<SyncPage> {
               width: 1.5,
             ),
             boxShadow: [
-              BoxShadow(
-                color: cs.shadow.withValues(alpha: 0.18),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
+              subtleBoxShadow(
+                context,
+                color: cs.shadow,
+                lightAlpha: 0.18,
+                darkAlpha: 0.06,
+                lightBlur: 18,
+                darkBlur: 6,
+                lightOffset: const Offset(0, 10),
+                darkOffset: const Offset(0, 2),
               ),
             ],
           ),
@@ -420,10 +431,15 @@ class _SyncPageState extends State<SyncPage> {
                   borderRadius: BorderRadius.circular(8),
                   color: cs.primaryContainer,
                   boxShadow: [
-                    BoxShadow(
-                      color: cs.shadow.withValues(alpha: 0.18),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
+                    subtleBoxShadow(
+                      context,
+                      color: cs.shadow,
+                      lightAlpha: 0.18,
+                      darkAlpha: 0.06,
+                      lightBlur: 16,
+                      darkBlur: 6,
+                      lightOffset: const Offset(0, 8),
+                      darkOffset: const Offset(0, 2),
                     ),
                   ],
                 ),

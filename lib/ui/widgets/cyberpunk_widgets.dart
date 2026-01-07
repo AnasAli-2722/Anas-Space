@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../helpers/shadow_helpers.dart';
 
 class GlitchText extends StatefulWidget {
   final String text;
@@ -133,10 +134,17 @@ class _CyberpunkButtonState extends State<CyberpunkButton> {
           boxShadow: _isPressed
               ? []
               : [
-                  BoxShadow(
-                    color: widget.color.withOpacity(0.5),
-                    blurRadius: 15.0,
-                    spreadRadius: 2.0,
+                  subtleBoxShadow(
+                    context,
+                    color: widget.color,
+                    lightAlpha: 0.5,
+                    darkAlpha: 0.12,
+                    lightBlur: 15.0,
+                    darkBlur: 6.0,
+                    lightOffset: const Offset(0, 6),
+                    darkOffset: const Offset(0, 2),
+                    lightSpread: 2.0,
+                    darkSpread: 0.0,
                   ),
                 ],
         ),

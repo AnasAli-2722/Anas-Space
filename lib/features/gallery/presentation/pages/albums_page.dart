@@ -8,6 +8,7 @@ import '../../domain/unified_asset.dart';
 import '../widgets/video_thumbnail_view.dart';
 import '../album_content_page.dart';
 import '../../../../ui/widgets/stone_theme_switch.dart';
+import '../../../../ui/helpers/shadow_helpers.dart';
 
 class AlbumsPage extends StatefulWidget {
   final GalleryService galleryService;
@@ -142,11 +143,15 @@ class _AlbumsPageState extends State<AlbumsPage> {
                         width: 1.5,
                       ),
                       boxShadow: [
-                        BoxShadow(
-                          color: cs.shadow.withValues(alpha: 0.25),
-                          blurRadius: 16,
-                          spreadRadius: 0,
-                          offset: const Offset(0, 8),
+                        subtleBoxShadow(
+                          context,
+                          color: cs.shadow,
+                          lightAlpha: 0.25,
+                          darkAlpha: 0.06,
+                          lightBlur: 16,
+                          darkBlur: 6,
+                          lightOffset: const Offset(0, 8),
+                          darkOffset: const Offset(0, 2),
                         ),
                       ],
                     ),
