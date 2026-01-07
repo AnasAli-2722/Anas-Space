@@ -85,17 +85,16 @@ class GrainPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint();
-    final random = Random();
-    for (int i = 0; i < 40000; i++) {
-      paint.color = Colors.white.withOpacity(random.nextDouble() * 0.02);
-      canvas.drawCircle(
-        Offset(
-          random.nextDouble() * size.width,
-          random.nextDouble() * size.height,
-        ),
-        0.7,
-        paint,
-      );
+
+    // Reduced from 40,000 to 6,000 to speed up first frame significantly.
+    // Also deterministic pattern (no Random allocations).
+    const int n = 6000;
+    for (int i = 0; i < n; i++) {
+      final dx = (i * 23.0) % size.width;
+      final dy = (i * 11.0) % size.height;
+      final a = ((i % 100) / 100.0) * 0.02; // 0..0.02
+      paint.color = Colors.white.withOpacity(a);
+      canvas.drawCircle(Offset(dx, dy), 0.7, paint);
     }
   }
 

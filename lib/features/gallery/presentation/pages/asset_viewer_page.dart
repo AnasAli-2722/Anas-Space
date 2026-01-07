@@ -30,57 +30,37 @@ class _AssetViewerPageState extends State<AssetViewerPage> {
   Future<void> _checkTypeAndLoad() async {
     if (widget.asset.deviceAsset != null) {
       _isVideo = widget.asset.deviceAsset!.type == AssetType.video;
-    } else if (widget.asset.localFile != null) {
-      final path = widget.asset.localFile!.path.toLowerCase();
-      _isVideo =
-          path.endsWith('.mp4') ||
-          path.endsWith('.mov') ||
-          path.endsWith('.avi') ||
-          path.endsWith('.mkv');
-    } else if (widget.asset.remoteUrl != null) {
-      final path = widget.asset.remoteUrl!.toLowerCase();
-      _isVideo = path.endsWith('.mp4') || path.endsWith('.mov');
     }
 
-    if (!_isVideo) {
-      setState(() => _isInitialized = true);
-      return;
-    }
+    if (!_isVideo) return;
 
     try {
-      if (widget.asset.deviceAsset != null) {
-        final file = await widget.asset.deviceAsset!.file;
-        if (file != null) {
-          _videoController = VideoPlayerController.file(file);
-        }
-      } else if (widget.asset.localFile != null) {
-        _videoController = VideoPlayerController.file(widget.asset.localFile!);
-      } else if (widget.asset.remoteUrl != null) {
-        _videoController = VideoPlayerController.networkUrl(
-          Uri.parse(widget.asset.remoteUrl!),
-        );
-      }
+      final file = await widget.asset.deviceAsset?.file;
+      if (file == null) return;
 
-      if (_videoController != null) {
-        await _videoController!.initialize();
-        _chewieController = ChewieController(
-          videoPlayerController: _videoController!,
-          autoPlay: true,
-          looping: true,
-          aspectRatio: _videoController!.value.aspectRatio,
-          errorBuilder: (context, errorMessage) {
-            return Center(
-              child: Text(
-                errorMessage,
-                style: const TextStyle(color: Colors.white),
-              ),
-            );
-          },
-        );
-        setState(() => _isInitialized = true);
-      }
-    } catch (e) {
-      debugPrint("Error loading video: $e");
+      _videoController = VideoPlayerController.file(file);
+
+      await _videoController!.initialize();
+
+      _chewieController = ChewieController(
+        videoPlayerController: _videoController!,
+        autoPlay: true,
+        looping: true,
+        aspectRatio: _videoController!.value.aspectRatio,
+        errorBuilder: (context, errorMessage) {
+          return Center(
+            child: Text(
+              errorMessage,
+              style: const TextStyle(color: Colors.white),
+            ),
+          );
+        },
+      );
+
+      if (!mounted) return;
+      setState(() => _isInitialized = true);
+    } catch (e, stackTrace) {
+      debugPrintStack(label: "Error loading video: $e", stackTrace: stackTrace);
     }
   }
 

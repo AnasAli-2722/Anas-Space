@@ -136,33 +136,32 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  // Cache formatters once.
+  static final DateFormat _monthFmt = DateFormat('MMMM');
+  static final DateFormat _yearFmt = DateFormat('y');
+
   Map<String, List<UnifiedAsset>> _groupAssets(List<UnifiedAsset> assets) {
-    Map<String, List<UnifiedAsset>> groups = {};
+    final groups = <String, List<UnifiedAsset>>{};
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
 
-    for (var asset in assets) {
+    for (final asset in assets) {
       final date = asset.dateModified;
       final assetDate = DateTime(date.year, date.month, date.day);
 
-      String header;
+      late final String header;
       if (assetDate == today) {
         header = "Today";
       } else if (assetDate == yesterday) {
         header = "Yesterday";
       } else if (date.year == now.year) {
-        // Same year: "October", "September"
-        header = DateFormat('MMMM').format(date);
+        header = _monthFmt.format(date);
       } else {
-        // Older: "2023", "2022"
-        header = DateFormat('y').format(date);
+        header = _yearFmt.format(date);
       }
 
-      if (!groups.containsKey(header)) {
-        groups[header] = [];
-      }
-      groups[header]!.add(asset);
+      (groups[header] ??= <UnifiedAsset>[]).add(asset);
     }
     return groups;
   }

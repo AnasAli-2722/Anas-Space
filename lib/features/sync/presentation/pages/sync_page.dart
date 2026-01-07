@@ -155,8 +155,13 @@ class _SyncPageState extends State<SyncPage> {
   Widget _buildStatusCard(SyncState state, BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    if (_tokenController.text != state.pairingToken) {
-      _tokenController.text = state.pairingToken;
+    final nextText = state.pairingToken;
+    if (_tokenController.text != nextText) {
+      _tokenController.value = _tokenController.value.copyWith(
+        text: nextText,
+        selection: TextSelection.collapsed(offset: nextText.length),
+        composing: TextRange.empty,
+      );
     }
 
     final bool isOnline = state.isServerRunning;

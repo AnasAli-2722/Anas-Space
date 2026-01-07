@@ -16,6 +16,9 @@ class TrashPage extends StatefulWidget {
 class _TrashPageState extends State<TrashPage> {
   late Future<List<TrashItem>> _trashItems;
 
+  // Cache: prevents recalculating on every rebuild.
+  late Future<String> _trashSize;
+
   @override
   void initState() {
     super.initState();
@@ -25,23 +28,28 @@ class _TrashPageState extends State<TrashPage> {
   void _loadTrash() {
     _trashItems =
         widget.galleryService.trashService?.listTrash() ?? Future.value([]);
+
+    // Important: don't call _getTrashSize() directly from build.
+    _trashSize = _getTrashSize();
   }
 
   Future<void> _restoreItem(TrashItem item) async {
     try {
       await widget.galleryService.trashService?.restore(item.trashedPath);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Restored: ${item.fileName}")));
-        setState(() => _loadTrash());
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error restoring: $e")));
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Item restored")));
+      setState(_loadTrash);
+    } catch (e, stackTrace) {
+      debugPrintStack(
+        label: "Error restoring item: $e",
+        stackTrace: stackTrace,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Failed to restore item")));
     }
   }
 
@@ -266,7 +274,7 @@ class _TrashPageState extends State<TrashPage> {
                   ),
                 ),
                 child: FutureBuilder<String>(
-                  future: _getTrashSize(),
+                  future: _trashSize,
                   builder: (context, snapshot) {
                     final size = snapshot.data ?? "Calculating...";
                     return Row(
